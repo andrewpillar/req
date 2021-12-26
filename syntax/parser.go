@@ -243,6 +243,7 @@ func (p *parser) operand() *Node {
 		n = p.arr()
 	default:
 		p.unexpected(p.tok)
+		p.advance(token.Semi)
 	}
 
 	return n
@@ -329,13 +330,19 @@ func (p *parser) matchstmt() *Node {
 		return nil
 	}
 
-	p.want(token.Lbrace, token.Rbrace)
+	if !p.got(token.Lbrace) {
+		p.expected(token.Lbrace)
+		return nil
+	}
+
+//	p.want(token.Lbrace, token.Rbrace)
 
 	for p.tok != token.Rbrace {
 		n.InsertBody(p.casestmt())
 
 		if p.tok != token.Comma && p.tok != token.Rbrace {
 			p.err("expected comma or }")
+			p.advance(token.Rbrace)
 			break
 		}
 		p.got(token.Comma)
@@ -432,7 +439,6 @@ func (p *parser) vardecl() *Node {
 	default:
 		n.Right = p.expr()
 	}
-
 	return n
 }
 
@@ -447,9 +453,6 @@ func (p *parser) stmt() *Node {
 	var n *Node
 
 	switch p.tok {
-	case token.Semi:
-		p.next()
-		break
 	case token.Name:
 		n = p.vardecl()
 	case token.Write:
@@ -460,9 +463,20 @@ func (p *parser) stmt() *Node {
 		n = p.exit()
 	default:
 		p.unexpected(p.tok)
-		p.next()
+		p.advance(token.Semi)
 	}
 
+	if p.tok != token.EOF {
+		if !p.got(token.Semi) {
+			// semi should be on the end of the line, so reporting the line
+			// number will be enough.
+			pos := p.pos
+			pos.Line--
+			pos.Col = 0
+
+			p.errAt(pos, "expected " + token.Semi.String())
+		}
+	}
 	return n
 }
 
