@@ -63,10 +63,9 @@ func (p *parser) unexpected(tok token.Token) {
 	p.err("unexpected " + tok.String())
 }
 
-func (p *parser) want(tok, next token.Token) {
+func (p *parser) want(tok token.Token) {
 	if !p.got(tok) {
 		p.expected(tok)
-		p.advance(next)
 	}
 }
 
@@ -161,71 +160,55 @@ loop:
 	return n
 }
 
+func (p *parser) list(sep, end token.Token, parse func()) {
+	for p.tok != token.EOF && p.tok != end {
+		parse()
+
+		if !p.got(sep) && p.tok != end {
+			p.err("expected " + sep.String() + " or " + end.String())
+			p.advance(end)
+		}
+	}
+	p.want(end)
+}
+
 func (p *parser) obj() *Node {
-	p.want(token.Lbrace, token.Semi)
+	p.want(token.Lbrace)
 
 	n := p.node(OOBJ)
 
-	for p.tok != token.Rbrace {
+	p.list(token.Comma, token.Rbrace, func() {
 		if p.tok != token.Name {
 			p.expected(token.Name)
-			p.advance(token.Comma)
-			p.got(token.Comma)
-			continue
+			p.next()
+			return
 		}
 
 		key := p.node(OKEY)
 		key.Left = p.name()
 
-		if p.tok != token.Colon {
-			p.expected(token.Colon)
-			p.advance(token.Comma)
-			goto cont
-		}
-
-		p.got(token.Colon)
+		p.want(token.Colon)
 
 		key.Right = p.operand()
 
 		n.InsertBody(key)
-
-cont:
-		if p.tok != token.Comma && p.tok != token.Rbrace {
-			p.err("expected comma or }")
-			p.advance(token.Semi)
-			break
-		}
-		p.got(token.Comma)
-	}
-
-	p.want(token.Rbrace, token.Semi)
+	})
 	return n
 }
 
 func (p *parser) arr() *Node {
-	p.want(token.Lbrack, token.Semi)
+	p.want(token.Lbrack)
 
 	n := p.node(OARR)
 
-	for p.tok != token.Rbrack {
+	p.list(token.Comma, token.Rbrack, func() {
 		if p.tok != token.Literal {
 			p.expected(token.Literal)
-			p.advance(token.Comma)
-			goto cont
+			p.next()
+			return
 		}
-
 		n.InsertList(p.literal())
-
-cont:
-		if p.tok != token.Comma && p.tok != token.Rbrack {
-			p.err("expected comma or ]")
-			p.advance(token.Semi)
-			break
-		}
-		p.got(token.Comma)
-	}
-
-	p.want(token.Rbrack, token.Semi)
+	})
 	return n
 }
 
@@ -243,14 +226,13 @@ func (p *parser) operand() *Node {
 		n = p.arr()
 	default:
 		p.unexpected(p.tok)
-		p.advance(token.Semi)
+		p.next()
 	}
-
 	return n
 }
 
 func (p *parser) blockstmt() *Node {
-	p.want(token.Lbrace, token.Semi)
+	p.want(token.Lbrace)
 
 	n := p.node(OBLOCK)
 
@@ -258,7 +240,7 @@ func (p *parser) blockstmt() *Node {
 		n.InsertBody(p.stmt())
 	}
 
-	p.want(token.Rbrace, token.Semi)
+	p.want(token.Rbrace)
 	return n
 }
 
@@ -300,7 +282,7 @@ func (p *parser) casestmt() *Node {
 	n.Left = p.literal()
 
 right:
-	p.want(token.Arrow, token.Comma)
+	p.want(token.Arrow)
 
 	switch p.tok {
 	case token.Lbrace:
@@ -327,23 +309,18 @@ func (p *parser) matchstmt() *Node {
 		n.Left = p.ref()
 	default:
 		p.unexpected(p.tok)
-		return nil
+		p.next()
 	}
 
-	if !p.got(token.Lbrace) {
-		p.expected(token.Lbrace)
-		return nil
-	}
-
-//	p.want(token.Lbrace, token.Rbrace)
+	p.want(token.Lbrace)
 
 	for p.tok != token.Rbrace {
 		n.InsertBody(p.casestmt())
 
 		if p.tok != token.Comma && p.tok != token.Rbrace {
 			p.err("expected comma or }")
-			p.advance(token.Rbrace)
-			break
+			p.next()
+			continue
 		}
 		p.got(token.Comma)
 	}
@@ -380,7 +357,7 @@ func (p *parser) action(op Op, val string, hasArrow bool) *Node {
 	}
 
 	if hasArrow {
-		p.want(token.Arrow, token.Semi)
+		p.want(token.Arrow)
 		n.Right = p.expr()
 	}
 	return n
