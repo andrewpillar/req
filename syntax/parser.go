@@ -32,12 +32,6 @@ func ParseFile(fname string, errh func(token.Pos, string)) ([]*Node, error) {
 	return p.parse(), nil
 }
 
-func (p *parser) advance(tok token.Token) {
-	for p.tok != tok {
-		p.next()
-	}
-}
-
 func (p *parser) got(tok token.Token) bool {
 	if p.tok == tok {
 		p.next()
@@ -119,7 +113,7 @@ loop:
 
 			if p.tok != token.Name {
 				p.expected(token.Name)
-				p.advance(token.Semi)
+				p.next()
 				return nil
 			}
 
@@ -166,7 +160,7 @@ func (p *parser) list(sep, end token.Token, parse func()) {
 
 		if !p.got(sep) && p.tok != end {
 			p.err("expected " + sep.String() + " or " + end.String())
-			p.advance(end)
+			p.next()
 		}
 	}
 	p.want(end)
@@ -236,7 +230,7 @@ func (p *parser) blockstmt() *Node {
 
 	n := p.node(OBLOCK)
 
-	for p.tok != token.Rbrace {
+	for p.tok != token.Rbrace && p.tok != token.EOF {
 		n.InsertBody(p.stmt())
 	}
 
@@ -352,7 +346,7 @@ func (p *parser) action(op Op, val string, hasArrow bool) *Node {
 
 	n.Left = p.node(OLIST)
 
-	for p.tok != end {
+	for p.tok != end  && p.tok != token.EOF {
 		n.Left.InsertList(p.operand())
 	}
 
@@ -440,7 +434,7 @@ func (p *parser) stmt() *Node {
 		n = p.exit()
 	default:
 		p.unexpected(p.tok)
-		p.advance(token.Semi)
+		p.next()
 	}
 
 	if p.tok != token.EOF {
