@@ -289,7 +289,7 @@ right:
 
 func (p *parser) matchstmt() *Node {
 	if p.tok != token.Match {
-		return  nil
+		return nil
 	}
 
 	n := p.node(OMATCH)
@@ -346,7 +346,7 @@ func (p *parser) action(op Op, val string, hasArrow bool) *Node {
 
 	n.Left = p.node(OLIST)
 
-	for p.tok != end  && p.tok != token.EOF {
+	for p.tok != end && p.tok != token.EOF {
 		n.Left.InsertList(p.operand())
 	}
 
@@ -371,7 +371,7 @@ func (p *parser) env() *Node {
 	return p.action(OENV, "", false)
 }
 
-func (p *parser) method() * Node {
+func (p *parser) method() *Node {
 	toks := map[token.Token]struct{}{
 		token.HEAD:    {},
 		token.OPTIONS: {},
@@ -445,7 +445,7 @@ func (p *parser) stmt() *Node {
 			pos.Line--
 			pos.Col = 0
 
-			p.errAt(pos, "expected " + token.Semi.String())
+			p.errAt(pos, "expected "+token.Semi.String())
 		}
 	}
 	return n
