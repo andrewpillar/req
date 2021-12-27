@@ -16,5 +16,5 @@ write $Resp.Body -> match $Resp.StatusCode {
 	_   -> {
 		yield $Stderr;
 		exit 1;
-	}
+	},
 }
