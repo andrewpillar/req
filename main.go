@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/andrewpillar/req/eval"
 	"github.com/andrewpillar/req/syntax"
 	"github.com/andrewpillar/req/token"
 )
@@ -75,7 +76,30 @@ func main() {
 				<-sems
 			}()
 
-			syntax.ParseFile(fname, errh(errs))
+			nn, err := syntax.ParseFile(fname, errh(errs))
+
+			if err != nil {
+				return
+			}
+
+			var e eval.Evaluator
+
+			e.AddAction(eval.EnvAction)
+			e.AddAction(eval.ExitAction)
+			e.AddAction(eval.OpenAction)
+			e.AddAction(eval.WriteAction)
+			e.AddAction(eval.HeadAction)
+			e.AddAction(eval.OptionsAction)
+			e.AddAction(eval.GetAction)
+			e.AddAction(eval.PutAction)
+			e.AddAction(eval.PostAction)
+			e.AddAction(eval.PatchAction)
+			e.AddAction(eval.DeleteAction)
+
+			if err := e.Eval(nn); err != nil {
+				errs <- err
+				return
+			}
 		}(fname)
 	}
 
