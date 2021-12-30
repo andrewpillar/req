@@ -2,70 +2,107 @@ package syntax
 
 import "github.com/andrewpillar/req/token"
 
-type Op uint
+type Node interface {
+	Pos() token.Pos
+}
 
-//go:generate stringer -type Op -trimprefix O
-const (
-	OVAR    Op = iota + 1 // Left = Right
-	OREF                  // $Left
-	OREFDOT               // $Left.Right
-	OREFIND               // $Left[Right]
+type node struct {
+	pos token.Pos
+}
 
-	OLIT  // Value
-	ONAME // Value
+func (n node) Pos() token.Pos {	return n.pos }
 
-	OARR   // [ List ]
-	OOBJ   // { Body }
-	OKEY   // Left: Right
-	OBLOCK // { Body }
-	OLIST  // List
+type VarDecl struct {
+	node
 
-	OMETHOD // Value Left -> Right
+	Ident *Ident
+	Value Node
+}
 
-	OMATCH // match Left { Body }
-	OCASE  // Left -> { Right }
-	OYIELD // yield Left
+type Ref struct {
+	node
 
-	OIF // if Left { Body } else { Next }
+	Left Node
+}
 
-	OOPEN  // open Left
-	OENV   // env Left
-	OEXIT  // exit Left
-	OWRITE // write Left -> Right
-)
+type DotExpr struct {
+	node
 
-type Node struct {
-	Pos   token.Pos
-	Op    Op
+	Left  Node
+	Right Node
+}
+
+type IndExpr struct {
+	node
+
+	Left  Node
+	Right Node
+}
+
+type Lit struct {
+	node
+
 	Type  token.Type
 	Value string
-	Body  *Node
-	List  *Node
-	Next  *Node
-	Left  *Node
-	Right *Node
 }
 
-func (n *Node) insertNext(n2 *Node) {
-	if n.Next == nil {
-		n.Next = n2
-		return
-	}
-	n.Next.insertNext(n2)
+type Ident struct {
+	node
+
+	Name string
 }
 
-func (n *Node) InsertBody(n2 *Node) {
-	if n.Body == nil {
-		n.Body = n2
-		return
-	}
-	n.Body.insertNext(n2)
+type Array struct {
+	node
+
+	Items []Node
 }
 
-func (n *Node) InsertList(n2 *Node) {
-	if n.List == nil {
-		n.List = n2
-		return
-	}
-	n.List.insertNext(n2)
+type Object struct {
+	node
+
+	objtab map[string]Node
+	Body   []Node
+}
+
+type KeyExpr struct {
+	node
+
+	Key   *Ident
+	Value Node
+}
+
+type BlockStmt struct {
+	node
+
+	Nodes []Node
+}
+
+type ActionStmt struct {
+	node
+
+	Name string
+	Args []Node
+	Dest Node
+}
+
+type MatchStmt struct {
+	node
+
+	Cond   Node
+	Jmptab map[uint32]Node
+}
+
+type YieldStmt struct {
+	node
+
+	Value Node
+}
+
+type IfStmt struct {
+	node
+
+	Cond Node
+	Then Node
+	Else Node
 }

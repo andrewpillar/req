@@ -2,6 +2,7 @@ package syntax
 
 import (
 	"fmt"
+	"hash/fnv"
 	"os"
 
 	"github.com/andrewpillar/req/token"
@@ -13,7 +14,7 @@ type parser struct {
 	errc int
 }
 
-func ParseFile(fname string, errh func(token.Pos, string)) ([]*Node, error) {
+func ParseFile(fname string, errh func(token.Pos, string)) ([]Node, error) {
 	f, err := os.Open(fname)
 
 	if err != nil {
@@ -63,45 +64,49 @@ func (p *parser) want(tok token.Token) {
 	}
 }
 
-func (p *parser) node(op Op) *Node {
-	return &Node{
-		Op:  op,
-		Pos: p.pos,
+func (p *parser) node() node {
+	return node{
+		pos: p.pos,
 	}
 }
 
-func (p *parser) name() *Node {
+func (p *parser) name() *Ident {
 	if p.tok != token.Name {
 		return nil
 	}
 
-	n := p.node(ONAME)
-	n.Value = p.lit
+	n := &Ident{
+		node: p.node(),
+		Name: p.lit,
+	}
 	p.next()
 	return n
 }
 
-func (p *parser) literal() *Node {
+func (p *parser) literal() *Lit {
 	if p.tok != token.Literal {
 		return nil
 	}
 
-	n := p.node(OLIT)
-	n.Type = p.typ
-	n.Value = p.lit
+	n := &Lit{
+		node:  p.node(),
+		Type:  p.typ,
+		Value: p.lit,
+	}
 	p.next()
 	return n
 }
 
-func (p *parser) ref() *Node {
+func (p *parser) ref() *Ref {
 	if p.tok != token.Ref {
 		return nil
 	}
 
 	p.got(token.Ref)
 
-	n := p.node(OREF)
-	n.Left = p.name()
+	ref := &Ref{
+		Left: p.name(),
+	}
 
 loop:
 	for {
@@ -117,12 +122,13 @@ loop:
 				return nil
 			}
 
-			tmp := p.node(OREFDOT)
-			tmp.Pos = pos
-			tmp.Left = n
-			tmp.Right = p.name()
+			left := ref.Left
 
-			n = tmp
+			ref.Left = &DotExpr{
+				node:  node{pos: pos},
+				Left:  left,
+				Right: p.name(),
+			}
 		case token.Lbrack:
 			p.next()
 
@@ -132,26 +138,27 @@ loop:
 				break
 			}
 
-			tmp := p.node(OREFIND)
-			tmp.Pos = pos
-			tmp.Left = n
+			left := ref.Left
+			ind := &IndExpr{
+				node: node{pos: pos},
+				Left: left,
+			}
 
 			switch p.tok {
 			case token.Literal:
-				tmp.Right = p.literal()
+				ind.Right = p.literal()
 			case token.Ref:
-				tmp.Right = p.ref()
+				ind.Right = p.ref()
 			default:
 				p.unexpected(p.tok)
 				p.next()
 			}
-
-			n = tmp
+			ref.Left = ind
 		default:
 			break loop
 		}
 	}
-	return n
+	return ref
 }
 
 func (p *parser) list(sep, end token.Token, parse func()) {
@@ -166,10 +173,12 @@ func (p *parser) list(sep, end token.Token, parse func()) {
 	p.want(end)
 }
 
-func (p *parser) obj() *Node {
+func (p *parser) obj() *Object {
 	p.want(token.Lbrace)
 
-	n := p.node(OOBJ)
+	n := &Object{
+		node: p.node(),
+	}
 
 	p.list(token.Comma, token.Rbrace, func() {
 		if p.tok != token.Name {
@@ -178,22 +187,25 @@ func (p *parser) obj() *Node {
 			return
 		}
 
-		key := p.node(OKEY)
-		key.Left = p.name()
+		key := p.name()
 
 		p.want(token.Colon)
 
-		key.Right = p.operand()
-
-		n.InsertBody(key)
+		n.Body = append(n.Body, &KeyExpr{
+			node:  p.node(),
+			Key:   key,
+			Value: p.operand(),
+		})
 	})
 	return n
 }
 
-func (p *parser) arr() *Node {
+func (p *parser) arr() *Array {
 	p.want(token.Lbrack)
 
-	n := p.node(OARR)
+	n := &Array{
+		node: p.node(),
+	}
 
 	p.list(token.Comma, token.Rbrack, func() {
 		if p.tok != token.Literal {
@@ -201,13 +213,13 @@ func (p *parser) arr() *Node {
 			p.next()
 			return
 		}
-		n.InsertList(p.literal())
+		n.Items = append(n.Items, p.literal())
 	})
 	return n
 }
 
-func (p *parser) operand() *Node {
-	var n *Node
+func (p *parser) operand() Node {
+	var n Node
 
 	switch p.tok {
 	case token.Literal:
@@ -225,82 +237,96 @@ func (p *parser) operand() *Node {
 	return n
 }
 
-func (p *parser) blockstmt() *Node {
+func (p *parser) blockstmt() *BlockStmt {
 	p.want(token.Lbrace)
 
-	n := p.node(OBLOCK)
+	n := &BlockStmt{
+		node: p.node(),
+	}
 
 	for p.tok != token.Rbrace && p.tok != token.EOF {
-		n.InsertBody(p.stmt())
+		n.Nodes = append(n.Nodes, p.stmt())
 	}
 
 	p.want(token.Rbrace)
 	return n
 }
 
-func (p *parser) yield() *Node {
+func (p *parser) yield() *YieldStmt {
 	if !p.got(token.Yield) {
 		return nil
 	}
 
-	n := p.node(OYIELD)
-	n.Left = p.operand()
-
-	return n
+	return &YieldStmt{
+		node:  p.node(),
+		Value: p.operand(),
+	}
 }
 
-func (p *parser) exit() *Node {
+func (p *parser) exit() *ActionStmt {
 	if !p.got(token.Exit) {
 		return nil
 	}
-
-	n := p.node(OEXIT)
-	n.Left = p.operand()
-
-	return n
+	return p.action("exit", false)
 }
 
-func (p *parser) casestmt() *Node {
-	n := p.node(OCASE)
+func (p *parser) casestmt(jmptab map[uint32]Node) {
+	var lit string
 
 	if p.tok == token.Name {
 		if p.lit != "_" {
 			p.unexpected(p.tok)
-			return nil
+			return
 		}
 
-		n.Left = p.name()
+		lit = p.lit
+		p.next()
 		goto right
 	}
 
-	n.Left = p.literal()
+	if p.tok != token.Literal {
+		p.unexpected(p.tok)
+		return
+	}
+
+	lit = p.lit
+	p.next()
 
 right:
 	p.want(token.Arrow)
 
+	h := fnv.New32()
+	h.Write([]byte(lit))
+
+	sum := h.Sum32()
+
 	switch p.tok {
 	case token.Lbrace:
-		n.Right = p.blockstmt()
+		jmptab[sum] = p.blockstmt()
 	case token.Yield:
-		n.Right = p.yield()
+		jmptab[sum] = p.yield()
+	default:
+		p.unexpected(p.tok)
 	}
-	return n
 }
 
-func (p *parser) matchstmt() *Node {
+func (p *parser) matchstmt() *MatchStmt {
 	if p.tok != token.Match {
 		return nil
 	}
 
-	n := p.node(OMATCH)
+	n := &MatchStmt{
+		node:   p.node(),
+		Jmptab: make(map[uint32]Node),
+	}
 
 	p.next()
 
 	switch p.tok {
 	case token.Literal:
-		n.Left = p.literal()
+		n.Cond = p.literal()
 	case token.Ref:
-		n.Left = p.ref()
+		n.Cond = p.ref()
 	default:
 		p.unexpected(p.tok)
 		p.next()
@@ -309,7 +335,7 @@ func (p *parser) matchstmt() *Node {
 	p.want(token.Lbrace)
 
 	for p.tok != token.Rbrace {
-		n.InsertBody(p.casestmt())
+		p.casestmt(n.Jmptab)
 
 		if p.tok != token.Comma && p.tok != token.Rbrace {
 			p.err("expected comma or }")
@@ -323,7 +349,7 @@ func (p *parser) matchstmt() *Node {
 	return n
 }
 
-func (p *parser) expr() *Node {
+func (p *parser) expr() Node {
 	switch p.tok {
 	case token.Match:
 		return p.matchstmt()
@@ -332,11 +358,11 @@ func (p *parser) expr() *Node {
 	}
 }
 
-func (p *parser) action(op Op, val string, hasArrow bool) *Node {
-	n := p.node(op)
-	n.Value = val
-
-	p.next()
+func (p *parser) action(name string, hasArrow bool) *ActionStmt {
+	n := &ActionStmt{
+		node: p.node(),
+		Name: name,
+	}
 
 	end := token.Semi
 
@@ -344,34 +370,34 @@ func (p *parser) action(op Op, val string, hasArrow bool) *Node {
 		end = token.Arrow
 	}
 
-	n.Left = p.node(OLIST)
-
 	for p.tok != end && p.tok != token.EOF {
-		n.Left.InsertList(p.operand())
+		n.Args = append(n.Args, p.operand())
 	}
 
 	if hasArrow {
 		p.want(token.Arrow)
-		n.Right = p.expr()
+		n.Dest = p.expr()
 	}
 	return n
 }
 
-func (p *parser) open() *Node {
+func (p *parser) open() *ActionStmt {
 	if p.tok != token.Open {
 		return nil
 	}
-	return p.action(OOPEN, "", false)
+	p.next()
+	return p.action("open", false)
 }
 
-func (p *parser) env() *Node {
+func (p *parser) env() *ActionStmt {
 	if p.tok != token.Env {
 		return nil
 	}
-	return p.action(OENV, "", false)
+	p.next()
+	return p.action("env", false)
 }
 
-func (p *parser) method() *Node {
+func (p *parser) method() *ActionStmt {
 	toks := map[token.Token]struct{}{
 		token.HEAD:    {},
 		token.OPTIONS: {},
@@ -385,16 +411,21 @@ func (p *parser) method() *Node {
 	if _, ok := toks[p.tok]; !ok {
 		return nil
 	}
-	return p.action(OMETHOD, p.lit, true)
+
+	lit := p.lit
+	p.next()
+	return p.action(lit, true)
 }
 
-func (p *parser) vardecl() *Node {
+func (p *parser) vardecl() *VarDecl {
 	if p.tok != token.Name {
 		return nil
 	}
 
-	n := p.node(OVAR)
-	n.Left = p.name()
+	n := &VarDecl{
+		node:  p.node(),
+		Ident: p.name(),
+	}
 
 	if !p.got(token.Assign) {
 		return nil
@@ -402,26 +433,27 @@ func (p *parser) vardecl() *Node {
 
 	switch p.tok {
 	case token.Open:
-		n.Right = p.open()
+		n.Value = p.open()
 	case token.Env:
-		n.Right = p.env()
+		n.Value = p.env()
 	case token.HEAD, token.OPTIONS, token.GET, token.POST, token.PUT, token.PATCH, token.DELETE:
-		n.Right = p.method()
+		n.Value = p.method()
 	default:
-		n.Right = p.expr()
+		n.Value = p.expr()
 	}
 	return n
 }
 
-func (p *parser) write() *Node {
+func (p *parser) write() *ActionStmt {
 	if p.tok != token.Write {
 		return nil
 	}
-	return p.action(OWRITE, "", true)
+	p.next()
+	return p.action("write", true)
 }
 
-func (p *parser) stmt() *Node {
-	var n *Node
+func (p *parser) stmt() Node {
+	var n Node
 
 	switch p.tok {
 	case token.Name:
@@ -451,8 +483,8 @@ func (p *parser) stmt() *Node {
 	return n
 }
 
-func (p *parser) parse() []*Node {
-	nn := make([]*Node, 0)
+func (p *parser) parse() []Node {
+	nn := make([]Node, 0)
 
 	for p.tok != token.EOF {
 		nn = append(nn, p.stmt())
