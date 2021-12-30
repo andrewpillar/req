@@ -1,9 +1,15 @@
 package syntax
 
-import "github.com/andrewpillar/req/token"
+import (
+	"errors"
+
+	"github.com/andrewpillar/req/token"
+)
 
 type Node interface {
 	Pos() token.Pos
+
+	Err(msg string) error
 }
 
 type node struct {
@@ -11,6 +17,10 @@ type node struct {
 }
 
 func (n node) Pos() token.Pos {	return n.pos }
+
+func (n node) Err(msg string) error {
+	return errors.New(n.Pos().String() + " - " + msg)
+}
 
 type VarDecl struct {
 	node
@@ -61,8 +71,7 @@ type Array struct {
 type Object struct {
 	node
 
-	objtab map[string]Node
-	Body   []Node
+	Pairs []*KeyExpr
 }
 
 type KeyExpr struct {

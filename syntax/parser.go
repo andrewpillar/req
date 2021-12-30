@@ -191,10 +191,12 @@ func (p *parser) obj() *Object {
 
 		p.want(token.Colon)
 
-		n.Body = append(n.Body, &KeyExpr{
+		val := p.operand()
+
+		n.Pairs = append(n.Pairs, &KeyExpr{
 			node:  p.node(),
 			Key:   key,
-			Value: p.operand(),
+			Value: val,
 		})
 	})
 	return n

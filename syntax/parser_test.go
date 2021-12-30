@@ -100,13 +100,13 @@ func checkArray(t *testing.T, expected, actual *Array) {
 }
 
 func checkObject(t *testing.T, expected, actual *Object) {
-	if len(expected.Body) != len(actual.Body) {
-		t.Errorf("%s - unexpected Object length, expeced=%d, got=%d\n", actual.Pos(), len(expected.Body), len(actual.Body))
+	if len(expected.Pairs) != len(actual.Pairs) {
+		t.Errorf("%s - unexpected Object.Pairs length, expeced=%d, got=%d\n", actual.Pos(), len(expected.Pairs), len(actual.Pairs))
 		return
 	}
 
-	for i, n := range actual.Body {
-		checkNode(t, expected.Body[i], n)
+	for i, n := range actual.Pairs {
+		checkNode(t, expected.Pairs[i], n)
 	}
 }
 
@@ -184,14 +184,6 @@ func checkMatchStmt(t *testing.T, expected, actual *MatchStmt) {
 		}
 		checkNode(t, n, actual.Jmptab[k])
 	}
-
-//	for k, n := range actual.Jmptab {
-//		if _, ok := expected.Jmptab[k]; !ok {
-//			t.Errorf("%s - could not find key %d in Jmptab\n", n.Pos(), k)
-//			continue
-//		}
-//		checkNode(t, expected.Jmptab[k], n)
-//	}
 }
 
 func checkYieldStmt(t *testing.T, expected, actual *YieldStmt) {
@@ -406,7 +398,7 @@ func Test_Parser(t *testing.T) {
 				Name: "GET",
 				Args: []Node{
 					&Object{
-						Body: []Node{
+						Pairs: []*KeyExpr{
 							&KeyExpr{
 								Key: &Ident{Name: "Authorization"},
 								Value: &Lit{
