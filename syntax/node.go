@@ -25,7 +25,7 @@ func (n node) Err(msg string) error {
 type VarDecl struct {
 	node
 
-	Ident *Ident
+	Name *Name
 	Value Node
 }
 
@@ -49,6 +49,12 @@ type IndExpr struct {
 	Right Node
 }
 
+type ChainExpr struct {
+	node
+
+	Commands []*CommandStmt
+}
+
 type Lit struct {
 	node
 
@@ -56,10 +62,10 @@ type Lit struct {
 	Value string
 }
 
-type Ident struct {
+type Name struct {
 	node
 
-	Name string
+	Value string
 }
 
 type Array struct {
@@ -77,7 +83,7 @@ type Object struct {
 type KeyExpr struct {
 	node
 
-	Key   *Ident
+	Key   *Name
 	Value Node
 }
 
@@ -90,14 +96,8 @@ type BlockStmt struct {
 type CommandStmt struct {
 	node
 
-	Name string
+	Name *Name
 	Args []Node
-}
-
-type ChainStmt struct {
-	node
-
-	Commands []*CommandStmt
 }
 
 type MatchStmt struct {

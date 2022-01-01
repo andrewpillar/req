@@ -8,14 +8,14 @@ import (
 )
 
 func checkVarDecl(t *testing.T, expected, actual *VarDecl) {
-	if expected.Ident != nil {
-		if actual.Ident == nil {
-			t.Errorf("%s - expected Ident for VarDecl\n", actual.Pos())
+	if expected.Name != nil {
+		if actual.Name == nil {
+			t.Errorf("%s - expected Name for VarDecl\n", actual.Pos())
 			return
 		}
 	}
 
-	checkIdent(t, expected.Ident, actual.Ident)
+	checkName(t, expected.Name, actual.Name)
 
 	if expected.Value != nil {
 		if actual.Value == nil {
@@ -82,9 +82,9 @@ func checkLit(t *testing.T, expected, actual *Lit) {
 	}
 }
 
-func checkIdent(t *testing.T, expected, actual *Ident) {
-	if expected.Name != actual.Name {
-		t.Errorf("%s - unexpected Ident.Name, expected=%q, got=%q\n", actual.Pos(), expected.Name, actual.Name)
+func checkName(t *testing.T, expected, actual *Name) {
+	if expected.Value != actual.Value {
+		t.Errorf("%s - unexpected Name.Value, expected=%q, got=%q\n", actual.Pos(), expected.Value, actual.Value)
 	}
 }
 
@@ -140,8 +140,8 @@ func checkBlockStmt(t *testing.T, expected, actual *BlockStmt) {
 }
 
 func checkCommandStmt(t *testing.T, expected, actual *CommandStmt) {
-	if expected.Name != actual.Name {
-		t.Errorf("%s - unexpected CommandStmt.Name, expected=%q, got=%q\n", actual.Pos(), expected.Name, actual.Name)
+	if expected.Name.Value != actual.Name.Value {
+		t.Errorf("%s - unexpected CommandStmt.Name, expected=%q, got=%q\n", actual.Pos(), expected.Name.Value, actual.Name.Value)
 		return
 	}
 
@@ -155,9 +155,9 @@ func checkCommandStmt(t *testing.T, expected, actual *CommandStmt) {
 	}
 }
 
-func checkChainStmt(t *testing.T, expected, actual *ChainStmt) {
+func checkChainExpr(t *testing.T, expected, actual *ChainExpr) {
 	if len(expected.Commands) != len(actual.Commands) {
-		t.Errorf("%s - unexpected ChainStmt.Commands length, expected=%d, got=%d\n", actual.Pos(), len(expected.Commands), len(actual.Commands))
+		t.Errorf("%s - unexpected ChainExpr.Commands length, expected=%d, got=%d\n", actual.Pos(), len(expected.Commands), len(actual.Commands))
 		return
 	}
 
@@ -267,14 +267,14 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkLit(t, v, lit)
-	case *Ident:
-		ident, ok := actual.(*Ident)
+	case *Name:
+		name, ok := actual.(*Name)
 
 		if !ok {
 			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
 			return
 		}
-		checkIdent(t, v, ident)
+		checkName(t, v, name)
 	case *Array:
 		arr, ok := actual.(*Array)
 
@@ -315,14 +315,14 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkCommandStmt(t, v, cmd)
-	case *ChainStmt:
-		chain, ok := actual.(*ChainStmt)
+	case *ChainExpr:
+		chain, ok := actual.(*ChainExpr)
 
 		if !ok {
 			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
 			return
 		}
-		checkChainStmt(t, v, chain)
+		checkChainExpr(t, v, chain)
 	case *MatchStmt:
 		match, ok := actual.(*MatchStmt)
 
@@ -361,9 +361,9 @@ func Test_Parser(t *testing.T) {
 
 	expected := []Node{
 		&VarDecl{
-			Ident: &Ident{Name: "Stdout"},
+			Name:  &Name{Value: "Stdout"},
 			Value: &CommandStmt{
-				Name: "open",
+				Name: &Name{Value: "open"},
 				Args: []Node{
 					&Lit{
 						Type:  token.String,
@@ -373,9 +373,9 @@ func Test_Parser(t *testing.T) {
 			},
 		},
 		&VarDecl{
-			Ident: &Ident{Name: "Stderr"},
+			Name:  &Name{Value: "Stderr"},
 			Value: &CommandStmt{
-				Name: "open",
+				Name: &Name{Value: "open"},
 				Args: []Node{
 					&Lit{
 						Type:  token.String,
@@ -385,16 +385,16 @@ func Test_Parser(t *testing.T) {
 			},
 		},
 		&VarDecl{
-			Ident: &Ident{Name: "Endpoint"},
+			Name:  &Name{Value: "Endpoint"},
 			Value: &Lit{
 				Type:  token.String,
 				Value: "https://api.github.com",
 			},
 		},
 		&VarDecl{
-			Ident: &Ident{Name: "Token"},
+			Name:  &Name{Value: "Token"},
 			Value: &CommandStmt{
-				Name: "env",
+				Name: &Name{Value: "env"},
 				Args: []Node{
 					&Lit{
 						Type:  token.String,
@@ -404,23 +404,27 @@ func Test_Parser(t *testing.T) {
 			},
 		},
 		&VarDecl{
-			Ident: &Ident{Name: "Resp"},
-			Value: &ChainStmt{
+			Name:  &Name{Value: "Resp"},
+			Value: &ChainExpr{
 				Commands: []*CommandStmt{
 					&CommandStmt{
-						Name: "GET",
+						Name: &Name{Value: "GET"},
 						Args: []Node{
+							&Lit{
+								Type: token.String,
+								Value: "${Endpoint}/user",
+							},
 							&Object{
 								Pairs: []*KeyExpr{
 									&KeyExpr{
-										Key: &Ident{Name: "Authorization"},
+										Key: &Name{Value: "Authorization"},
 										Value: &Lit{
 											Type: token.String,
 											Value: "Bearer ${Token}",
 										},
 									},
 									&KeyExpr{
-										Key: &Ident{Name: "Content-Type"},
+										Key: &Name{Value: "Content-Type"},
 										Value: &Lit{
 											Type: token.String,
 											Value: "application/json; charset=utf-8",
@@ -428,42 +432,42 @@ func Test_Parser(t *testing.T) {
 									},
 								},
 							},
-							&Lit{
-								Type: token.String,
-								Value: "${Endpoint}/user",
-							},
 						},
 					},
 					&CommandStmt{
-						Name: "send",
+						Name: &Name{Value: "send"},
 					},
 				},
 			},
 		},
 		&CommandStmt{
-			Name: "print",
+			Name: &Name{Value: "print"},
 			Args: []Node{
 				&Ref{
 					Left: &DotExpr{
-						Left:  &Ident{Name: "Resp"},
-						Right: &Ident{Name: "Body"},
+						Left:  &Name{Value: "Resp"},
+						Right: &Name{Value: "Body"},
 					},
 				},
 				&MatchStmt{
 					Cond: &Ref{
 						Left: &DotExpr{
-							Left:  &Ident{Name: "Resp"},
-							Right: &Ident{Name: "StatusCode"},
+							Left:  &Name{Value: "Resp"},
+							Right: &Name{Value: "StatusCode"},
 						},
 					},
 					Jmptab: map[uint32]Node{
 						1859371669: &YieldStmt{
-							Value: &Ref{Left: &Ident{Name: "Stdout"}},
+							Value: &Ref{
+								Left: &Name{Value: "Stdout"},
+							},
 						},
 						84696384: &BlockStmt{
 							Nodes: []Node{
 								&YieldStmt{
-									Value: &Ref{Left: &Ident{Name: "Stderr"}},
+									Value: &Ref{
+										Left: &Name{Value: "Stderr"},
+									},
 								},
 							},
 						},

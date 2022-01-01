@@ -70,15 +70,16 @@ func (p *parser) node() node {
 	}
 }
 
-func (p *parser) ident() *Ident {
+func (p *parser) name() *Name {
 	if p.tok != token.Name {
 		return nil
 	}
 
-	n := &Ident{
-		node: p.node(),
-		Name: p.lit,
+	n := &Name{
+		node:  p.node(),
+		Value: p.lit,
 	}
+
 	p.next()
 	return n
 }
@@ -105,7 +106,8 @@ func (p *parser) ref() *Ref {
 	p.got(token.Ref)
 
 	ref := &Ref{
-		Left: p.ident(),
+		node: p.node(),
+		Left: p.name(),
 	}
 
 loop:
@@ -127,7 +129,7 @@ loop:
 			ref.Left = &DotExpr{
 				node:  node{pos: pos},
 				Left:  left,
-				Right: p.ident(),
+				Right: p.name(),
 			}
 		case token.Lbrack:
 			p.next()
@@ -187,7 +189,7 @@ func (p *parser) obj() *Object {
 			return
 		}
 
-		key := p.ident()
+		key := p.name()
 
 		p.want(token.Colon)
 
@@ -240,10 +242,11 @@ func (p *parser) yield() *YieldStmt {
 		return nil
 	}
 
-	return &YieldStmt{
+	n := &YieldStmt{
 		node:  p.node(),
 		Value: p.operand(),
 	}
+	return n
 }
 
 func (p *parser) casestmt(jmptab map[uint32]Node) {
@@ -325,8 +328,8 @@ func (p *parser) matchstmt() *MatchStmt {
 	return n
 }
 
-func (p *parser) chain(cmd *CommandStmt) *ChainStmt {
-	n := &ChainStmt{
+func (p *parser) chain(cmd *CommandStmt) *ChainExpr {
+	n := &ChainExpr{
 		Commands: []*CommandStmt{cmd},
 	}
 
@@ -337,8 +340,7 @@ func (p *parser) chain(cmd *CommandStmt) *ChainStmt {
 			continue
 		}
 
-		ident := p.ident()
-		n.Commands = append(n.Commands, p.command(ident.Name))
+		n.Commands = append(n.Commands, p.command(p.name()))
 
 		if !p.got(token.Arrow) && p.tok != token.Semi && p.tok != token.EOF {
 			p.err("expected " + token.Arrow.String() + " or " + token.Semi.String())
@@ -370,9 +372,7 @@ func (p *parser) operand() Node {
 func (p *parser) expr() Node {
 	switch p.tok {
 	case token.Name:
-		ident := p.ident()
-
-		n := p.command(ident.Name)
+		n := p.command(p.name())
 
 		if p.got(token.Arrow) {
 			return p.chain(n)
@@ -385,7 +385,7 @@ func (p *parser) expr() Node {
 	}
 }
 
-func (p *parser) command(name string) *CommandStmt {
+func (p *parser) command(name *Name) *CommandStmt {
 	n := &CommandStmt{
 		node: p.node(),
 		Name: name,
@@ -397,10 +397,10 @@ func (p *parser) command(name string) *CommandStmt {
 	return n
 }
 
-func (p *parser) vardecl(ident *Ident) *VarDecl {
+func (p *parser) vardecl(name *Name) *VarDecl {
 	n := &VarDecl{
-		node:  p.node(),
-		Ident: ident,
+		node: p.node(),
+		Name: name,
 	}
 
 	if !p.got(token.Assign) {
@@ -417,14 +417,14 @@ func (p *parser) stmt() Node {
 
 	switch p.tok {
 	case token.Name:
-		ident := p.ident()
+		name := p.name()
 
 		if p.tok == token.Assign {
-			n = p.vardecl(ident)
+			n = p.vardecl(name)
 			break
 		}
 
-		cmd := p.command(ident.Name)
+		cmd := p.command(name)
 		n = cmd
 
 		if p.got(token.Arrow) {
