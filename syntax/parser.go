@@ -331,12 +331,7 @@ func (p *parser) chain(n0 Node) *ChainStmt {
 	}
 
 	for p.tok != token.Semi && p.tok != token.EOF {
-		switch p.tok {
-		case token.Ref:
-			n.Nodes = append(n.Nodes, p.ref())
-		default:
-			n.Nodes = append(n.Nodes, p.expr())
-		}
+		n.Nodes = append(n.Nodes, p.expr())
 
 		if !p.got(token.Arrow) && p.tok != token.Semi && p.tok != token.EOF {
 			p.err("expected " + token.Arrow.String() + " or " + token.Semi.String())
