@@ -130,7 +130,7 @@ func checkKeyExpr(t *testing.T, expected, actual *KeyExpr) {
 
 func checkBlockStmt(t *testing.T, expected, actual *BlockStmt) {
 	if len(expected.Nodes) != len(actual.Nodes) {
-		t.Errorf("%s - unexpected BlockStmt length, expected=%q, got=%d\n", actual.Pos(), len(expected.Nodes), len(actual.Nodes))
+		t.Errorf("%s - unexpected BlockStmt length, expected=%d, got=%d\n", actual.Pos(), len(expected.Nodes), len(actual.Nodes))
 		return
 	}
 
@@ -139,27 +139,30 @@ func checkBlockStmt(t *testing.T, expected, actual *BlockStmt) {
 	}
 }
 
-func checkActionStmt(t *testing.T, expected, actual *ActionStmt) {
+func checkCommandStmt(t *testing.T, expected, actual *CommandStmt) {
 	if expected.Name != actual.Name {
-		t.Errorf("%s - unexpected Action.Name, expected=%q, got=%q\n", actual.Pos(), expected.Name, actual.Name)
+		t.Errorf("%s - unexpected CommandStmt.Name, expected=%q, got=%q\n", actual.Pos(), expected.Name, actual.Name)
 		return
 	}
 
 	if len(expected.Args) != len(actual.Args) {
-		t.Errorf("%s - unexpected Action.Args length, expected=%d, got=%d\n", actual.Pos(), len(expected.Args), len(actual.Args))
+		t.Errorf("%s - unexpected CommandStmt.Args length, expected=%d, got=%d\n", actual.Pos(), len(expected.Args), len(actual.Args))
 		return
 	}
 
 	for i, n := range actual.Args {
 		checkNode(t, expected.Args[i], n)
 	}
+}
 
-	if expected.Dest != nil {
-		if actual.Dest == nil {
-			t.Errorf("%s - expected Dest for Action\n", actual.Pos())
-			return
-		}
-		checkNode(t, expected.Dest, actual.Dest)
+func checkChainStmt(t *testing.T, expected, actual *ChainStmt) {
+	if len(expected.Nodes) != len(actual.Nodes) {
+		t.Errorf("%s - unexpected ChainStmt.Nodes length, expected=%d, got=%d\n", actual.Pos(), len(expected.Nodes), len(actual.Nodes))
+		return
+	}
+
+	for i, n := range actual.Nodes {
+		checkNode(t, expected.Nodes[i], n)
 	}
 }
 
@@ -304,14 +307,22 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkBlockStmt(t, v, block)
-	case *ActionStmt:
-		action, ok := actual.(*ActionStmt)
+	case *CommandStmt:
+		cmd, ok := actual.(*CommandStmt)
 
 		if !ok {
 			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
 			return
 		}
-		checkActionStmt(t, v, action)
+		checkCommandStmt(t, v, cmd)
+	case *ChainStmt:
+		chain, ok := actual.(*ChainStmt)
+
+		if !ok {
+			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
+			return
+		}
+		checkChainStmt(t, v, chain)
 	case *MatchStmt:
 		match, ok := actual.(*MatchStmt)
 
@@ -351,7 +362,7 @@ func Test_Parser(t *testing.T) {
 	expected := []Node{
 		&VarDecl{
 			Ident: &Ident{Name: "Stdout"},
-			Value: &ActionStmt{
+			Value: &CommandStmt{
 				Name: "open",
 				Args: []Node{
 					&Lit{
@@ -363,7 +374,7 @@ func Test_Parser(t *testing.T) {
 		},
 		&VarDecl{
 			Ident: &Ident{Name: "Stderr"},
-			Value: &ActionStmt{
+			Value: &CommandStmt{
 				Name: "open",
 				Args: []Node{
 					&Lit{
@@ -382,7 +393,7 @@ func Test_Parser(t *testing.T) {
 		},
 		&VarDecl{
 			Ident: &Ident{Name: "Token"},
-			Value: &ActionStmt{
+			Value: &CommandStmt{
 				Name: "env",
 				Args: []Node{
 					&Lit{
@@ -394,67 +405,69 @@ func Test_Parser(t *testing.T) {
 		},
 		&VarDecl{
 			Ident: &Ident{Name: "Resp"},
-			Value: &ActionStmt{
-				Name: "GET",
-				Args: []Node{
-					&Object{
-						Pairs: []*KeyExpr{
-							&KeyExpr{
-								Key: &Ident{Name: "Authorization"},
-								Value: &Lit{
-									Type: token.String,
-									Value: "Bearer ${Token}",
+			Value: &ChainStmt{
+				Nodes: []Node{
+					&CommandStmt{
+						Name: "GET",
+						Args: []Node{
+							&Object{
+								Pairs: []*KeyExpr{
+									&KeyExpr{
+										Key: &Ident{Name: "Authorization"},
+										Value: &Lit{
+											Type: token.String,
+											Value: "Bearer ${Token}",
+										},
+									},
+									&KeyExpr{
+										Key: &Ident{Name: "Content-Type"},
+										Value: &Lit{
+											Type: token.String,
+											Value: "application/json; charset=utf-8",
+										},
+									},
 								},
 							},
-							&KeyExpr{
-								Key: &Ident{Name: "Content-Type"},
-								Value: &Lit{
-									Type: token.String,
-									Value: "application/json; charset=utf-8",
-								},
+							&Lit{
+								Type: token.String,
+								Value: "${Endpoint}/user",
+							},
+						},
+					},
+					&CommandStmt{
+						Name: "send",
+					},
+				},
+			},
+		},
+		&ChainStmt{
+			Nodes: []Node{
+				&CommandStmt{
+					Name: "write",
+					Args: []Node{
+						&Ref{
+							Left: &DotExpr{
+								Left:  &Ident{Name: "Resp"},
+								Right: &Ident{Name: "Body"},
 							},
 						},
 					},
 				},
-				Dest: &Lit{
-					Type: token.String,
-					Value: "${Endpoint}/user",
-				},
-			},
-		},
-		&ActionStmt{
-			Name: "write",
-			Args: []Node{
-				&Ref{
-					Left: &DotExpr{
-						Left:  &Ident{Name: "Resp"},
-						Right: &Ident{Name: "Body"},
+				&MatchStmt{
+					Cond: &Ref{
+						Left: &DotExpr{
+							Left:  &Ident{Name: "Resp"},
+							Right: &Ident{Name: "StatusCode"},
+						},
 					},
-				},
-			},
-			Dest: &MatchStmt{
-				Cond: &Ref{
-					Left: &DotExpr{
-						Left:  &Ident{Name: "Resp"},
-						Right: &Ident{Name: "StatusCode"},
-					},
-				},
-				Jmptab: map[uint32]Node{
-					1859371669: &YieldStmt{
-						Value: &Ref{Left: &Ident{Name: "Stdout"}},
-					},
-					84696384: &BlockStmt{
-						Nodes: []Node{
-							&YieldStmt{
-								Value: &Ref{Left: &Ident{Name: "Stderr"}},
-							},
-							&ActionStmt{
-								Name: "exit",
-								Args: []Node{
-									&Lit{
-										Type:  token.Int,
-										Value: "1",
-									},
+					Jmptab: map[uint32]Node{
+						1859371669: &YieldStmt{
+							Value: &Ref{Left: &Ident{Name: "Stdout"}},
+						},
+						84696384: &BlockStmt{
+							Nodes: []Node{
+								&YieldStmt{
+									Value: &Ref{Left: &Ident{Name: "Stderr"}},
 								},
 							},
 						},

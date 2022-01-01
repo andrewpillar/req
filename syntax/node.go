@@ -87,12 +87,17 @@ type BlockStmt struct {
 	Nodes []Node
 }
 
-type ActionStmt struct {
+type CommandStmt struct {
 	node
 
 	Name string
 	Args []Node
-	Dest Node
+}
+
+type ChainStmt struct {
+	node
+
+	Nodes []Node
 }
 
 type MatchStmt struct {

@@ -9,12 +9,11 @@ Token = env "GH_TOKEN";
 Resp = GET {
 	Authorization: "Bearer ${Token}",
 	Content-Type: "application/json; charset=utf-8",
-} -> "${Endpoint}/user";
+} "${Endpoint}/user" -> send;
 
 write $Resp.Body -> match $Resp.StatusCode {
 	200 -> yield $Stdout,
 	_   -> {
 		yield $Stderr;
-		exit 1;
 	},
 }

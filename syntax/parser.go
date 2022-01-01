@@ -70,7 +70,7 @@ func (p *parser) node() node {
 	}
 }
 
-func (p *parser) name() *Ident {
+func (p *parser) ident() *Ident {
 	if p.tok != token.Name {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (p *parser) ref() *Ref {
 	p.got(token.Ref)
 
 	ref := &Ref{
-		Left: p.name(),
+		Left: p.ident(),
 	}
 
 loop:
@@ -127,7 +127,7 @@ loop:
 			ref.Left = &DotExpr{
 				node:  node{pos: pos},
 				Left:  left,
-				Right: p.name(),
+				Right: p.ident(),
 			}
 		case token.Lbrack:
 			p.next()
@@ -187,7 +187,7 @@ func (p *parser) obj() *Object {
 			return
 		}
 
-		key := p.name()
+		key := p.ident()
 
 		p.want(token.Colon)
 
@@ -220,25 +220,6 @@ func (p *parser) arr() *Array {
 	return n
 }
 
-func (p *parser) operand() Node {
-	var n Node
-
-	switch p.tok {
-	case token.Literal:
-		n = p.literal()
-	case token.Ref:
-		n = p.ref()
-	case token.Lbrace:
-		n = p.obj()
-	case token.Lbrack:
-		n = p.arr()
-	default:
-		p.unexpected(p.tok)
-		p.next()
-	}
-	return n
-}
-
 func (p *parser) blockstmt() *BlockStmt {
 	p.want(token.Lbrace)
 
@@ -263,13 +244,6 @@ func (p *parser) yield() *YieldStmt {
 		node:  p.node(),
 		Value: p.operand(),
 	}
-}
-
-func (p *parser) exit() *ActionStmt {
-	if !p.got(token.Exit) {
-		return nil
-	}
-	return p.action("exit", false)
 }
 
 func (p *parser) casestmt(jmptab map[uint32]Node) {
@@ -351,8 +325,57 @@ func (p *parser) matchstmt() *MatchStmt {
 	return n
 }
 
+func (p *parser) chain(n0 Node) *ChainStmt {
+	n := &ChainStmt{
+		Nodes: []Node{n0},
+	}
+
+	for p.tok != token.Semi && p.tok != token.EOF {
+		switch p.tok {
+		case token.Ref:
+			n.Nodes = append(n.Nodes, p.ref())
+		default:
+			n.Nodes = append(n.Nodes, p.expr())
+		}
+
+		if !p.got(token.Arrow) && p.tok != token.Semi && p.tok != token.EOF {
+			p.err("expected " + token.Arrow.String() + " or " + token.Semi.String())
+			p.next()
+		}
+	}
+	return n
+}
+
+func (p *parser) operand() Node {
+	var n Node
+
+	switch p.tok {
+	case token.Literal:
+		n = p.literal()
+	case token.Ref:
+		n = p.ref()
+	case token.Lbrace:
+		n = p.obj()
+	case token.Lbrack:
+		n = p.arr()
+	default:
+		p.unexpected(p.tok)
+		p.next()
+	}
+	return n
+}
+
 func (p *parser) expr() Node {
 	switch p.tok {
+	case token.Name:
+		ident := p.ident()
+
+		n := p.command(ident.Name)
+
+		if p.got(token.Arrow) {
+			return p.chain(n)
+		}
+		return n
 	case token.Match:
 		return p.matchstmt()
 	default:
@@ -360,98 +383,31 @@ func (p *parser) expr() Node {
 	}
 }
 
-func (p *parser) action(name string, hasArrow bool) *ActionStmt {
-	n := &ActionStmt{
+func (p *parser) command(name string) *CommandStmt {
+	n := &CommandStmt{
 		node: p.node(),
 		Name: name,
 	}
 
-	end := token.Semi
-
-	if hasArrow {
-		end = token.Arrow
-	}
-
-	for p.tok != end && p.tok != token.EOF {
-		n.Args = append(n.Args, p.operand())
-	}
-
-	if hasArrow {
-		p.want(token.Arrow)
-		n.Dest = p.expr()
+	for p.tok != token.Arrow && p.tok != token.Semi && p.tok != token.EOF {
+		n.Args = append(n.Args, p.expr())
 	}
 	return n
 }
 
-func (p *parser) open() *ActionStmt {
-	if p.tok != token.Open {
-		return nil
-	}
-	p.next()
-	return p.action("open", false)
-}
-
-func (p *parser) env() *ActionStmt {
-	if p.tok != token.Env {
-		return nil
-	}
-	p.next()
-	return p.action("env", false)
-}
-
-func (p *parser) method() *ActionStmt {
-	toks := map[token.Token]struct{}{
-		token.HEAD:    {},
-		token.OPTIONS: {},
-		token.GET:     {},
-		token.POST:    {},
-		token.PUT:     {},
-		token.PATCH:   {},
-		token.DELETE:  {},
-	}
-
-	if _, ok := toks[p.tok]; !ok {
-		return nil
-	}
-
-	lit := p.lit
-	p.next()
-	return p.action(lit, true)
-}
-
-func (p *parser) vardecl() *VarDecl {
-	if p.tok != token.Name {
-		return nil
-	}
-
+func (p *parser) vardecl(ident *Ident) *VarDecl {
 	n := &VarDecl{
 		node:  p.node(),
-		Ident: p.name(),
+		Ident: ident,
 	}
 
 	if !p.got(token.Assign) {
 		return nil
 	}
 
-	switch p.tok {
-	case token.Open:
-		n.Value = p.open()
-	case token.Env:
-		n.Value = p.env()
-	case token.HEAD, token.OPTIONS, token.GET, token.POST, token.PUT, token.PATCH, token.DELETE:
-		n.Value = p.method()
-	default:
-		n.Value = p.expr()
-	}
-	return n
-}
+	n.Value = p.expr()
 
-func (p *parser) write() *ActionStmt {
-	if p.tok != token.Write {
-		return nil
-	}
-	p.next()
-	return p.action("write", true)
+	return n
 }
 
 func (p *parser) stmt() Node {
@@ -459,13 +415,22 @@ func (p *parser) stmt() Node {
 
 	switch p.tok {
 	case token.Name:
-		n = p.vardecl()
-	case token.Write:
-		n = p.write()
+		ident := p.ident()
+
+		if p.tok == token.Assign {
+			n = p.vardecl(ident)
+			break
+		}
+
+		n = p.command(ident.Name)
+
+		if p.got(token.Arrow) {
+			n = p.chain(n)
+		}
+	case token.Match:
+		n = p.matchstmt()
 	case token.Yield:
 		n = p.yield()
-	case token.Exit:
-		n = p.exit()
 	default:
 		p.unexpected(p.tok)
 		p.next()
@@ -473,13 +438,7 @@ func (p *parser) stmt() Node {
 
 	if p.tok != token.EOF {
 		if !p.got(token.Semi) {
-			// semi should be on the end of the line, so reporting the line
-			// number will be enough.
-			pos := p.pos
-			pos.Line--
-			pos.Col = 0
-
-			p.errAt(pos, "expected "+token.Semi.String())
+			p.expected(token.Semi)
 		}
 	}
 	return n
