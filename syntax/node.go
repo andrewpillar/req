@@ -97,7 +97,7 @@ type CommandStmt struct {
 type ChainStmt struct {
 	node
 
-	Nodes []Node
+	Commands []*CommandStmt
 }
 
 type MatchStmt struct {

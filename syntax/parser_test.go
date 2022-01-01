@@ -156,13 +156,13 @@ func checkCommandStmt(t *testing.T, expected, actual *CommandStmt) {
 }
 
 func checkChainStmt(t *testing.T, expected, actual *ChainStmt) {
-	if len(expected.Nodes) != len(actual.Nodes) {
-		t.Errorf("%s - unexpected ChainStmt.Nodes length, expected=%d, got=%d\n", actual.Pos(), len(expected.Nodes), len(actual.Nodes))
+	if len(expected.Commands) != len(actual.Commands) {
+		t.Errorf("%s - unexpected ChainStmt.Commands length, expected=%d, got=%d\n", actual.Pos(), len(expected.Commands), len(actual.Commands))
 		return
 	}
 
-	for i, n := range actual.Nodes {
-		checkNode(t, expected.Nodes[i], n)
+	for i, n := range actual.Commands {
+		checkNode(t, expected.Commands[i], n)
 	}
 }
 
@@ -406,7 +406,7 @@ func Test_Parser(t *testing.T) {
 		&VarDecl{
 			Ident: &Ident{Name: "Resp"},
 			Value: &ChainStmt{
-				Nodes: []Node{
+				Commands: []*CommandStmt{
 					&CommandStmt{
 						Name: "GET",
 						Args: []Node{
@@ -440,17 +440,13 @@ func Test_Parser(t *testing.T) {
 				},
 			},
 		},
-		&ChainStmt{
-			Nodes: []Node{
-				&CommandStmt{
-					Name: "write",
-					Args: []Node{
-						&Ref{
-							Left: &DotExpr{
-								Left:  &Ident{Name: "Resp"},
-								Right: &Ident{Name: "Body"},
-							},
-						},
+		&CommandStmt{
+			Name: "print",
+			Args: []Node{
+				&Ref{
+					Left: &DotExpr{
+						Left:  &Ident{Name: "Resp"},
+						Right: &Ident{Name: "Body"},
 					},
 				},
 				&MatchStmt{

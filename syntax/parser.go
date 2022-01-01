@@ -325,13 +325,20 @@ func (p *parser) matchstmt() *MatchStmt {
 	return n
 }
 
-func (p *parser) chain(n0 Node) *ChainStmt {
+func (p *parser) chain(cmd *CommandStmt) *ChainStmt {
 	n := &ChainStmt{
-		Nodes: []Node{n0},
+		Commands: []*CommandStmt{cmd},
 	}
 
 	for p.tok != token.Semi && p.tok != token.EOF {
-		n.Nodes = append(n.Nodes, p.expr())
+		if p.tok != token.Name {
+			p.expected(token.Name)
+			p.next()
+			continue
+		}
+
+		ident := p.ident()
+		n.Commands = append(n.Commands, p.command(ident.Name))
 
 		if !p.got(token.Arrow) && p.tok != token.Semi && p.tok != token.EOF {
 			p.err("expected " + token.Arrow.String() + " or " + token.Semi.String())
@@ -417,10 +424,11 @@ func (p *parser) stmt() Node {
 			break
 		}
 
-		n = p.command(ident.Name)
+		cmd := p.command(ident.Name)
+		n = cmd
 
 		if p.got(token.Arrow) {
-			n = p.chain(n)
+			n = p.chain(cmd)
 		}
 	case token.Match:
 		n = p.matchstmt()
