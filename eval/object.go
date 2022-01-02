@@ -182,8 +182,27 @@ type respObj struct {
 	*http.Response
 }
 
+func copyrc(rc io.ReadCloser) (io.ReadCloser, io.ReadCloser) {
+	var buf bytes.Buffer
+	buf.ReadFrom(rc)
+
+	return io.NopCloser(&buf), io.NopCloser(bytes.NewBuffer(buf.Bytes()))
+}
+
 func (r respObj) String() string {
-	return "response"
+	var buf bytes.Buffer
+
+	buf.WriteString(r.Proto + " " + r.Status + "\n")
+
+	rc, rc2 := copyrc(r.Body)
+
+	r.Body = rc
+
+	r.Header.Write(&buf)
+	buf.WriteString("\n\n")
+	io.Copy(&buf, rc2)
+
+	return buf.String()
 }
 
 func (r respObj) Type() Type { return Response }
