@@ -2,7 +2,6 @@ package syntax
 
 import (
 	"fmt"
-	"hash/fnv"
 	"os"
 
 	"github.com/andrewpillar/req/token"
@@ -249,44 +248,39 @@ func (p *parser) yield() *YieldStmt {
 	return n
 }
 
-func (p *parser) casestmt(jmptab map[uint32]Node) {
-	var lit string
+func (p *parser) casestmt() *CaseStmt {
+	n := &CaseStmt{
+		node: p.node(),
+	}
 
 	if p.tok == token.Name {
 		if p.lit != "_" {
 			p.unexpected(p.tok)
-			return
+			return nil
 		}
-
-		lit = p.lit
-		p.next()
+		n.Value = p.name()
 		goto right
 	}
 
 	if p.tok != token.Literal {
 		p.unexpected(p.tok)
-		return
+		return nil
 	}
 
-	lit = p.lit
-	p.next()
+	n.Value = p.literal()
 
 right:
 	p.want(token.Arrow)
 
-	h := fnv.New32()
-	h.Write([]byte(lit))
-
-	sum := h.Sum32()
-
 	switch p.tok {
 	case token.Lbrace:
-		jmptab[sum] = p.blockstmt()
+		n.Then = p.blockstmt()
 	case token.Yield:
-		jmptab[sum] = p.yield()
+		n.Then = p.yield()
 	default:
 		p.unexpected(p.tok)
 	}
+	return n
 }
 
 func (p *parser) matchstmt() *MatchStmt {
@@ -295,8 +289,7 @@ func (p *parser) matchstmt() *MatchStmt {
 	}
 
 	n := &MatchStmt{
-		node:   p.node(),
-		Jmptab: make(map[uint32]Node),
+		node: p.node(),
 	}
 
 	p.next()
@@ -314,7 +307,7 @@ func (p *parser) matchstmt() *MatchStmt {
 	p.want(token.Lbrace)
 
 	for p.tok != token.Rbrace {
-		p.casestmt(n.Jmptab)
+		n.Cases = append(n.Cases, p.casestmt())
 
 		if p.tok != token.Comma && p.tok != token.Rbrace {
 			p.err("expected comma or }")

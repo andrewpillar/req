@@ -96,11 +96,18 @@ type CommandStmt struct {
 	Args []Node
 }
 
+type CaseStmt struct {
+	node
+
+	Value Node
+	Then  Node
+}
+
 type MatchStmt struct {
 	node
 
-	Cond   Node
-	Jmptab map[uint32]Node
+	Cond  Node
+	Cases []*CaseStmt
 }
 
 type YieldStmt struct {

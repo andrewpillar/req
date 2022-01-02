@@ -175,17 +175,14 @@ func checkMatchStmt(t *testing.T, expected, actual *MatchStmt) {
 		checkNode(t, expected.Cond, actual.Cond)
 	}
 
-	if len(expected.Jmptab) != len(actual.Jmptab) {
-		t.Errorf("%s - unexpected MatchStmt.Jmptab length, expected=%d, got=%d\n", actual.Pos(), len(expected.Jmptab), len(actual.Jmptab))
+	if len(expected.Cases) != len(actual.Cases) {
+		t.Errorf("%s - unexpected MatchStmt.Cases length, expected=%d, got=%d\n", actual.Pos(), len(expected.Cases), len(actual.Cases))
 		return
 	}
 
-	for k, n := range expected.Jmptab {
-		if _, ok := actual.Jmptab[k]; !ok {
-			t.Errorf("%s - could not find key %d in Jmptab\n", n.Pos(), k)
-			continue
-		}
-		checkNode(t, n, actual.Jmptab[k])
+	for i, n := range expected.Cases {
+		checkNode(t, n.Value, actual.Cases[i].Value)
+		checkNode(t, n.Then, actual.Cases[i].Then)
 	}
 }
 
@@ -456,17 +453,26 @@ func Test_Parser(t *testing.T) {
 							Right: &Name{Value: "StatusCode"},
 						},
 					},
-					Jmptab: map[uint32]Node{
-						1859371669: &YieldStmt{
-							Value: &Ref{
-								Left: &Name{Value: "Stdout"},
+					Cases: []*CaseStmt{
+						&CaseStmt{
+							Value: &Lit{
+								Type:  token.Int,
+								Value: "200",
+							},
+							Then: &YieldStmt{
+								Value: &Ref{
+									Left: &Name{Value: "Stdout"},
+								},
 							},
 						},
-						84696384: &BlockStmt{
-							Nodes: []Node{
-								&YieldStmt{
-									Value: &Ref{
-										Left: &Name{Value: "Stderr"},
+						&CaseStmt{
+							Value: &Name{Value: "_"},
+							Then: &BlockStmt{
+								Nodes: []Node{
+									&YieldStmt{
+										Value: &Ref{
+											Left: &Name{Value: "Stderr"},
+										},
 									},
 								},
 							},
