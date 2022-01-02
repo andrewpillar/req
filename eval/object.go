@@ -143,7 +143,21 @@ type reqObj struct {
 }
 
 func (r reqObj) String() string {
-	return "request"
+	var buf bytes.Buffer
+
+	buf.WriteString(r.Method + " " + r.Proto + "\n")
+
+	r.Header.Write(&buf)
+
+	if r.Body != nil {
+		buf.WriteString("\n\n")
+
+		rc, rc2 := copyrc(r.Body)
+
+		r.Body = rc
+		io.Copy(&buf, rc2)
+	}
+	return buf.String()
 }
 
 func (r reqObj) Type() Type { return Request }
