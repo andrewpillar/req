@@ -329,6 +329,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 				return nil, n.Err(err.Error())
 			}
 		}
+		return obj, nil
 	case *syntax.IfStmt:
 	}
 	return nil, nil
