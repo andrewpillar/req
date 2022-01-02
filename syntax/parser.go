@@ -230,7 +230,7 @@ func (p *parser) blockstmt() *BlockStmt {
 	}
 
 	for p.tok != token.Rbrace && p.tok != token.EOF {
-		n.Nodes = append(n.Nodes, p.stmt())
+		n.Nodes = append(n.Nodes, p.stmt(true))
 	}
 
 	p.want(token.Rbrace)
@@ -412,7 +412,7 @@ func (p *parser) vardecl(name *Name) *VarDecl {
 	return n
 }
 
-func (p *parser) stmt() Node {
+func (p *parser) stmt(inBlock bool) Node {
 	var n Node
 
 	switch p.tok {
@@ -433,6 +433,11 @@ func (p *parser) stmt() Node {
 	case token.Match:
 		n = p.matchstmt()
 	case token.Yield:
+		if !inBlock {
+			p.err("yield outside of block statement")
+			p.next()
+			break
+		}
 		n = p.yield()
 	default:
 		p.unexpected(p.tok)
@@ -451,7 +456,7 @@ func (p *parser) parse() []Node {
 	nn := make([]Node, 0)
 
 	for p.tok != token.EOF {
-		nn = append(nn, p.stmt())
+		nn = append(nn, p.stmt(false))
 	}
 	return nn
 }
