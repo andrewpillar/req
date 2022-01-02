@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -36,7 +35,7 @@ func files() ([]string, error) {
 		}
 
 		if fname := ent.Name(); strings.HasSuffix(fname, ".req") {
-			fnames = append(fnames, filepath.Join(dir, fname))
+			fnames = append(fnames, fname)
 		}
 	}
 
@@ -46,8 +45,6 @@ func files() ([]string, error) {
 
 func errh(errs chan error) func(token.Pos, string) {
 	return func(pos token.Pos, msg string) {
-		pos.File = filepath.Base(pos.File)
-
 		errs <- errors.New(pos.String() + " - " + msg)
 	}
 }
