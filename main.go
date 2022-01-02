@@ -84,19 +84,20 @@ func main() {
 
 			var e eval.Evaluator
 
-			e.AddAction(eval.EnvAction)
-			e.AddAction(eval.ExitAction)
-			e.AddAction(eval.OpenAction)
-			e.AddAction(eval.WriteAction)
-			e.AddAction(eval.HeadAction)
-			e.AddAction(eval.OptionsAction)
-			e.AddAction(eval.GetAction)
-			e.AddAction(eval.PutAction)
-			e.AddAction(eval.PostAction)
-			e.AddAction(eval.PatchAction)
-			e.AddAction(eval.DeleteAction)
+			e.AddCmd(eval.EnvCmd)
+			e.AddCmd(eval.ExitCmd)
+			e.AddCmd(eval.OpenCmd)
+			e.AddCmd(eval.PrintCmd)
+			e.AddCmd(eval.HeadCmd)
+			e.AddCmd(eval.OptionsCmd)
+			e.AddCmd(eval.GetCmd)
+			e.AddCmd(eval.PutCmd)
+			e.AddCmd(eval.PostCmd)
+			e.AddCmd(eval.PatchCmd)
+			e.AddCmd(eval.DeleteCmd)
+			e.AddCmd(eval.SendCmd)
 
-			if err := e.Eval(nn); err != nil {
+			if err := e.Run(nn); err != nil {
 				errs <- err
 				return
 			}

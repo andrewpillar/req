@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"bytes"
 	"errors"
 	"strconv"
 
@@ -9,160 +10,291 @@ import (
 )
 
 type symtab struct {
-	tab map[string]Value
+	tab map[string]Object
 }
 
-func (s *symtab) put(name string, val Value) {
+func (s *symtab) put(name *syntax.Name, obj Object) {
 	if s.tab == nil {
-		s.tab = make(map[string]Value)
+		s.tab = make(map[string]Object)
 	}
-	s.tab[name] = val
+	s.tab[name.Value] = obj
 }
 
-func (s *symtab) get(name string) (Value, error) {
+func (s *symtab) get(name *syntax.Name) (Object, error) {
 	if s.tab == nil {
-		return nil, errors.New("undefined: " + name)
+		return nil, errors.New("undefined: " + name.Value)
 	}
 
-	val, ok := s.tab[name]
+	val, ok := s.tab[name.Value]
 
 	if !ok {
-		return nil, errors.New("undefined: " + name)
+		return nil, errors.New("undefined: " + name.Value)
 	}
 	return val, nil
 }
 
 type Evaluator struct {
-	actions map[string]Action
-	symtab  symtab
+	cmds   map[string]*Command
+	symtab symtab
 }
 
-func (e *Evaluator) AddAction(a Action) {
-	if e.actions == nil {
-		e.actions = make(map[string]Action)
+func (e *Evaluator) AddCmd(cmd *Command) {
+	if e.cmds == nil {
+		e.cmds = make(map[string]*Command)
 	}
-	e.actions[a.Name] = a
+	e.cmds[cmd.Name] = cmd
 }
 
-func (e *Evaluator) interpolate(n syntax.Node, s string) (Value, error) {
-	return String{Value: s}, nil
+func (e *Evaluator) interpolate(pos token.Pos, s string) (Object, error) {
+	var buf bytes.Buffer
+
+	interpolate := false
+	expr := make([]rune, 0, len(s))
+
+	for _, r := range s {
+		if r == '{' {
+			interpolate = true
+		}
+
+		if r == '}' {
+			interpolate = false
+			expr = expr[0:0]
+			continue
+		}
+
+		if interpolate {
+			expr = append(expr, r)
+			continue
+		}
+		buf.WriteRune(r)
+	}
+	return stringObj{value: buf.String()}, nil
 }
 
-func (e *Evaluator) doEval(n syntax.Node) (Value, error) {
+func (e *Evaluator) resolveCommand(n *syntax.CommandStmt) (*Command, []Object, error) {
+	cmd, ok := e.cmds[n.Name.Value]
+
+	if !ok {
+		return nil, nil, n.Err("undefined command: " + n.Name.Value)
+	}
+
+	args := make([]Object, 0, len(n.Args))
+
+	for _, arg := range n.Args {
+		val, err := e.Eval(arg)
+
+		if err != nil {
+			return nil, nil, arg.Err(err.Error())
+		}
+		args = append(args, val)
+	}
+	return cmd, args, nil
+}
+
+func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
+	i64, ok := ind.(intObj)
+
+	if !ok {
+		return nil, TypeError{
+			typ:      ind.Type(),
+			expected: Int,
+		}
+	}
+
+	arrobj := arr.(arrayObj)
+	end := len(arrobj.items) - 1
+
+	i := int(i64.value)
+
+	if i < 0 || i > end {
+		return nil, nil
+	}
+	return arrobj.items[i], nil
+}
+
+func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
+	s, ok := key.(stringObj)
+
+	if !ok {
+		return nil, TypeError{
+			typ:      key.Type(),
+			expected: String,
+		}
+	}
+
+	obj, ok := hash.(hashObj).pairs[s.value]
+
+	if !ok {
+		return nil, nil
+	}
+	return obj, nil
+}
+
+func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
+	left, err := e.Eval(n.Left)
+
+	if err != nil {
+		return nil, n.Left.Err(err.Error())
+	}
+
+	sel, ok := left.(Selector)
+
+	if !ok {
+		return nil, n.Err("cannot use type " + left.Type().String() + " as selector")
+	}
+
+	right, err := e.Eval(n.Right)
+
+	if err != nil {
+		return nil, n.Right.Err(err.Error())
+	}
+
+	obj, err := sel.Select(right)
+
+	if err != nil {
+		return nil, n.Err(err.Error())
+	}
+	return obj, nil
+}
+
+func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
-		val, err := e.doEval(v.Value)
+		val, err := e.Eval(v.Value)
 
 		if err != nil {
 			return nil, v.Err(err.Error())
 		}
-		e.symtab.put(v.Ident.Name, val)
+		e.symtab.put(v.Name, val)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
-		case *syntax.Ident:
-			return e.symtab.get(v.Name)
+		case *syntax.Name:
+			return e.symtab.get(v)
 		case *syntax.DotExpr:
+			return e.resolveDot(v)
 		case *syntax.IndExpr:
+			left, err := e.Eval(v.Left)
+
+			if err != nil {
+				return nil, v.Err(err.Error())
+			}
+
+			right, err := e.Eval(v.Right)
+
+			if err != nil {
+				return nil, v.Err(err.Error())
+			}
+
+			switch left.Type() {
+			case Array:
+				obj, err := e.resolveArrayIndex(left, right)
+
+				if err != nil {
+					return nil, v.Err(err.Error())
+				}
+				return obj, err
+			case Hash:
+				obj, err := e.resolveHashKey(left, right)
+
+				if err != nil {
+					return nil, v.Err(err.Error())
+				}
+				return obj, err
+			default:
+				return nil, v.Left.Err("type " + left.Type().String() + " does not support indexing")
+			}
 		default:
 			return nil, v.Err("invalid reference")
 		}
 	case *syntax.Lit:
 		switch v.Type {
 		case token.String:
-			return e.interpolate(v, v.Value)
+			return e.interpolate(v.Pos(), v.Value)
 		case token.Int:
 			i, _ := strconv.ParseInt(v.Value, 10, 64)
-			return Int{Value: i}, nil
+			return intObj{value: i}, nil
 		case token.Bool:
 			b := true
 
 			if v.Value != "true" {
 				b = false
 			}
-			return Bool{Value: b}, nil
+			return boolObj{value: b}, nil
 		}
-	case *syntax.Ident:
+	case *syntax.Name:
+		return nameObj{value: v.Value}, nil
 	case *syntax.Array:
-		items := make([]Value, 0, len(v.Items))
+		items := make([]Object, 0, len(v.Items))
 
 		for _, it := range v.Items {
-			val, err := e.doEval(it)
+			obj, err := e.Eval(it)
 
 			if err != nil {
 				return nil, it.Err(err.Error())
 			}
-			items = append(items, val)
+			items = append(items, obj)
 		}
-		return Array{Items: items}, nil
+		return arrayObj{items: items}, nil
 	case *syntax.Object:
-		pairs := make(map[Key]Value)
+		pairs := make(map[string]Object)
 
 		for _, n := range v.Pairs {
-			val, err := e.doEval(n.Value)
+			obj, err := e.Eval(n.Value)
 
 			if err != nil {
 				return nil, n.Value.Err(err.Error())
 			}
-			pairs[Key{Name: n.Key.Name}] = val
+			pairs[n.Key.Value] = obj
 		}
-		return Object{Pairs: pairs}, nil
+		return hashObj{pairs: pairs}, nil
 	case *syntax.BlockStmt:
 		for _, n := range v.Nodes {
-			val, err := e.doEval(n)
+			obj, err := e.Eval(n)
 
 			if err != nil {
 				return nil, n.Err(err.Error())
 			}
 
-			if _, ok := val.(Yield); ok {
-				return val, nil
+			if obj.Type() == Yield {
+				return obj.(yieldObj).value, nil
 			}
 		}
 		return nil, nil
-	case *syntax.ActionStmt:
-		action, ok := e.actions[v.Name]
+	case *syntax.CommandStmt:
+		cmd, args, err := e.resolveCommand(v)
 
-		if !ok {
-			return nil, v.Err("undefined action: " + v.Name)
+		if err != nil {
+			return nil, err
 		}
+		return cmd.Invoke(args)
+	case *syntax.ChainExpr:
+		var obj Object
 
-		args := make([]Value, 0, len(v.Args))
-
-		for _, n := range v.Args {
-			val, err := e.doEval(n)
+		for _, n := range v.Commands {
+			cmd, args, err := e.resolveCommand(n)
 
 			if err != nil {
 				return nil, n.Err(err.Error())
 			}
-			args = append(args, val)
-		}
 
-		var dest Value
+			if obj != nil {
+				args = append([]Object{obj}, args...)
+			}
 
-		if v.Dest != nil {
-			val, err := e.doEval(v.Dest)
+			obj, err = cmd.Invoke(args)
 
 			if err != nil {
-				return nil, v.Dest.Err(err.Error())
+				return nil, n.Err(err.Error())
 			}
-			dest = val
 		}
-		return action.Call(args, dest)
-	case *syntax.YieldStmt:
-		val, err := e.doEval(v.Value)
-
-		if err != nil {
-			return nil, v.Err(err.Error())
-		}
-		return Yield{Value: val}, nil
 	case *syntax.IfStmt:
 	}
 	return nil, nil
 }
 
-func (e *Evaluator) Eval(nn []syntax.Node) error {
+func (e *Evaluator) Run(nn []syntax.Node) error {
 	for _, n := range nn {
-		if _, err := e.doEval(n); err != nil {
+		if _, err := e.Eval(n); err != nil {
 			return err
 		}
 	}
