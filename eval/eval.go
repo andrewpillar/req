@@ -25,12 +25,12 @@ func (s *symtab) get(name *syntax.Name) (Object, error) {
 		return nil, errors.New("undefined: " + name.Value)
 	}
 
-	val, ok := s.tab[name.Value]
+	obj, ok := s.tab[name.Value]
 
 	if !ok {
 		return nil, errors.New("undefined: " + name.Value)
 	}
-	return val, nil
+	return obj, nil
 }
 
 type Evaluator struct {
@@ -81,12 +81,12 @@ func (e *Evaluator) resolveCommand(n *syntax.CommandStmt) (*Command, []Object, e
 	args := make([]Object, 0, len(n.Args))
 
 	for _, arg := range n.Args {
-		val, err := e.Eval(arg)
+		obj, err := e.Eval(arg)
 
 		if err != nil {
 			return nil, nil, arg.Err(err.Error())
 		}
-		args = append(args, val)
+		args = append(args, obj)
 	}
 	return cmd, args, nil
 }
@@ -160,12 +160,12 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
-		val, err := e.Eval(v.Value)
+		obj, err := e.Eval(v.Value)
 
 		if err != nil {
 			return nil, v.Err(err.Error())
 		}
-		e.symtab.put(v.Name, val)
+		e.symtab.put(v.Name, obj)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
 		case *syntax.Name:
