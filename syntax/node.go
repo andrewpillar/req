@@ -1,10 +1,6 @@
 package syntax
 
-import (
-	"errors"
-
-	"github.com/andrewpillar/req/token"
-)
+import "github.com/andrewpillar/req/token"
 
 type Node interface {
 	Pos() token.Pos
@@ -19,7 +15,7 @@ type node struct {
 func (n node) Pos() token.Pos {	return n.pos }
 
 func (n node) Err(msg string) error {
-	return errors.New(n.Pos().String() + " - " + msg)
+	return n.pos.Err(msg)
 }
 
 type VarDecl struct {

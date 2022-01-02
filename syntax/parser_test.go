@@ -412,7 +412,7 @@ func Test_Parser(t *testing.T) {
 						Args: []Node{
 							&Lit{
 								Type: token.String,
-								Value: "${Endpoint}/user",
+								Value: "{$Endpoint}/user",
 							},
 							&Object{
 								Pairs: []*KeyExpr{
@@ -420,7 +420,7 @@ func Test_Parser(t *testing.T) {
 										Key: &Name{Value: "Authorization"},
 										Value: &Lit{
 											Type: token.String,
-											Value: "Bearer ${Token}",
+											Value: "Bearer {$Token}",
 										},
 									},
 									&KeyExpr{

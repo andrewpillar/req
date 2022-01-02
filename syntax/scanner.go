@@ -88,15 +88,12 @@ func (sc *scanner) string() {
 			break
 		}
 
-		if r == '\'' {
+		if r == '\\' {
 			skip = !skip
 		}
 
-		if r == '$' {
-			if sc.get() == '{' {
-				interpolate = true
-			}
-			sc.unget()
+		if r == '{' {
+			interpolate = true
 		}
 
 		if r == '}' {
