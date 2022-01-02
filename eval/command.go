@@ -29,7 +29,7 @@ var errNotEnoughArgs = errors.New("not enough arguments")
 
 func (e CommandError) Error() string {
 	if e.Op != "" {
-		return "invalid " + e.Op + " to " + e.Cmd + ": " + e.Err.Error() 
+		return "invalid " + e.Op + " to " + e.Cmd + ": " + e.Err.Error()
 	}
 	return e.Cmd + ": " + e.Err.Error()
 }
@@ -150,7 +150,7 @@ func print_(args []Object) (Object, error) {
 
 	out := os.Stdout
 
-	end := len(args)-1
+	end := len(args) - 1
 	last := args[end]
 
 	if f, ok := last.(fileObj); ok {

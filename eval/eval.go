@@ -14,22 +14,22 @@ type symtab struct {
 	tab map[string]Object
 }
 
-func (s *symtab) put(name *syntax.Name, obj Object) {
+func (s *symtab) put(name nameObj, obj Object) {
 	if s.tab == nil {
 		s.tab = make(map[string]Object)
 	}
-	s.tab[name.Value] = obj
+	s.tab[name.value] = obj
 }
 
-func (s *symtab) get(name *syntax.Name) (Object, error) {
+func (s *symtab) get(name nameObj) (Object, error) {
 	if s.tab == nil {
-		return nil, errors.New("undefined: " + name.Value)
+		return nil, errors.New("undefined: " + name.value)
 	}
 
-	obj, ok := s.tab[name.Value]
+	obj, ok := s.tab[name.value]
 
 	if !ok {
-		return nil, errors.New("undefined: " + name.Value)
+		return nil, errors.New("undefined: " + name.value)
 	}
 	return obj, nil
 }
@@ -138,10 +138,22 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 		return nil, n.Left.Err(err.Error())
 	}
 
-	sel, ok := left.(Selector)
+	name, ok := left.(nameObj)
 
 	if !ok {
-		return nil, n.Err("cannot use type " + left.Type().String() + " as selector")
+		return nil, n.Left.Err("expected name")
+	}
+
+	obj, err := e.symtab.get(name)
+
+	if err != nil {
+		return nil, n.Err(err.Error())
+	}
+
+	sel, ok := obj.(Selector)
+
+	if !ok {
+		return nil, errors.New("cannot use type " + obj.Type().String() + " as selector")
 	}
 
 	right, err := e.Eval(n.Right)
@@ -150,7 +162,7 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 		return nil, n.Right.Err(err.Error())
 	}
 
-	obj, err := sel.Select(right)
+	obj, err = sel.Select(right)
 
 	if err != nil {
 		return nil, n.Err(err.Error())
@@ -161,16 +173,19 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
+		name := nameObj{value: v.Name.Value}
+
 		obj, err := e.Eval(v.Value)
 
 		if err != nil {
 			return nil, v.Err(err.Error())
 		}
-		e.symtab.put(v.Name, obj)
+		e.symtab.put(name, obj)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
 		case *syntax.Name:
-			return e.symtab.get(v)
+			name := nameObj{value: v.Value}
+			return e.symtab.get(name)
 		case *syntax.DotExpr:
 			return e.resolveDot(v)
 		case *syntax.IndExpr:
@@ -250,14 +265,8 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		return hashObj{pairs: pairs}, nil
 	case *syntax.BlockStmt:
 		for _, n := range v.Nodes {
-			obj, err := e.Eval(n)
-
-			if err != nil {
+			if _, err := e.Eval(n); err != nil {
 				return nil, n.Err(err.Error())
-			}
-
-			if obj.Type() == Yield {
-				return obj.(yieldObj).value, nil
 			}
 		}
 		return nil, nil
@@ -267,7 +276,13 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		return cmd.Invoke(args)
+
+		obj, err := cmd.Invoke(args)
+
+		if err != nil {
+			return nil, v.Err(err.Error())
+		}
+		return obj, nil
 	case *syntax.MatchStmt:
 		obj, err := e.Eval(v.Cond)
 

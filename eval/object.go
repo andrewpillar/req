@@ -15,18 +15,18 @@ type Type uint
 
 //go:generate stringer -type Type -linecomment
 const (
-	String Type = iota + 1 // string
-	Int                    // int
-	Bool                   // bool
-	Array                  // array
-	Hash                   // hash
-	File                   // file
-	Request                // request
-	Response               // response
-	Stream                 // stream
-	Name                   // name
-	Key                    // key
-	Yield                  // yield
+	String   Type = iota + 1 // string
+	Int                      // int
+	Bool                     // bool
+	Array                    // array
+	Hash                     // hash
+	File                     // file
+	Request                  // request
+	Response                 // response
+	Stream                   // stream
+	Name                     // name
+	Key                      // key
+	Yield                    // yield
 )
 
 type Selector interface {
