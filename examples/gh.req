@@ -6,8 +6,8 @@ Stderr = open "/dev/stderr";
 Endpoint = "https://api.github.com";
 Token = env "GH_TOKEN";
 
-Resp = GET "${Endpoint}/user" {
-	Authorization: "Bearer ${Token}",
+Resp = GET "{$Endpoint}/user" {
+	Authorization: "Bearer {$Token}",
 	Content-Type: "application/json; charset=utf-8",
 } -> send;
 
