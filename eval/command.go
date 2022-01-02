@@ -134,7 +134,7 @@ func open(args []Object) (Object, error) {
 }
 
 var PrintCmd = &Command{
-	Name: "write",
+	Name: "print",
 	Argc: -1,
 	Func: print_,
 }
@@ -150,17 +150,25 @@ func print_(args []Object) (Object, error) {
 
 	out := os.Stdout
 
-	last := args[len(args)-1]
+	end := len(args)-1
+	last := args[end]
 
 	if f, ok := last.(fileObj); ok {
 		out = f.File
+		args = args[:end]
 	}
 
 	var buf bytes.Buffer
 
-	for _, arg := range args {
+	for i, arg := range args {
 		buf.WriteString(arg.String())
+
+		if i != end {
+			buf.WriteByte(' ')
+		}
 	}
+
+	buf.WriteByte('\n')
 
 	if _, err := fmt.Fprint(out, buf.String()); err != nil {
 		return nil, CommandError{
@@ -334,7 +342,7 @@ func request(name string, args []Object) (Object, error) {
 
 		hash = arg1.(hashObj)
 
-		if len(args) >= 2 {
+		if len(args) > 2 {
 			arg2 := args[2]
 
 			switch arg2.Type() {
