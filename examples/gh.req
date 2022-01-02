@@ -6,15 +6,14 @@ Stderr = open "/dev/stderr";
 Endpoint = "https://api.github.com";
 Token = env "GH_TOKEN";
 
-Resp = GET {
+Resp = GET "${Endpoint}/user" {
 	Authorization: "Bearer ${Token}",
 	Content-Type: "application/json; charset=utf-8",
-} -> "${Endpoint}/user";
+} -> send;
 
-write $Resp.Body -> match $Resp.StatusCode {
+print $Resp.Body match $Resp.StatusCode {
 	200 -> yield $Stdout,
 	_   -> {
 		yield $Stderr;
-		exit 1;
 	},
 }
