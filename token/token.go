@@ -1,11 +1,18 @@
 package token
 
-import "strconv"
+import (
+	"errors"
+	"strconv"
+)
 
 type Pos struct {
 	File string
 	Line int
 	Col  int
+}
+
+func (p Pos) Err(msg string) error {
+	return errors.New(p.String() + " - " + msg)
 }
 
 func (p Pos) String() string {
@@ -49,19 +56,6 @@ const (
 	Match // match
 	Range // range
 	Yield // yield
-
-	Open  // open
-	Env   // env
-	Exit  // exit
-	Write // write
-
-	HEAD    // HEAD
-	OPTIONS // OPTIONS
-	GET     // GET
-	POST    // POST
-	PUT     // PUT
-	PATCH   // PATCH
-	DELETE  // DELETE
 )
 
 type Type uint
@@ -74,22 +68,11 @@ const (
 )
 
 var keywords = map[string]Token{
-	"if":      If,
-	"else":    Else,
-	"match":   Match,
-	"range":   Range,
-	"yield":   Yield,
-	"open":    Open,
-	"env":     Env,
-	"exit":    Exit,
-	"write":   Write,
-	"HEAD":    HEAD,
-	"OPTIONS": OPTIONS,
-	"GET":     GET,
-	"POST":    POST,
-	"PUT":     PUT,
-	"PATCH":   PATCH,
-	"DELETE":  DELETE,
+	"if":    If,
+	"else":  Else,
+	"match": Match,
+	"range": Range,
+	"yield": Yield,
 }
 
 func Lookup(s string) Token {

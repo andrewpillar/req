@@ -28,22 +28,11 @@ func _() {
 	_ = x[Match-18]
 	_ = x[Range-19]
 	_ = x[Yield-20]
-	_ = x[Open-21]
-	_ = x[Env-22]
-	_ = x[Exit-23]
-	_ = x[Write-24]
-	_ = x[HEAD-25]
-	_ = x[OPTIONS-26]
-	_ = x[GET-27]
-	_ = x[POST-28]
-	_ = x[PUT-29]
-	_ = x[PATCH-30]
-	_ = x[DELETE-31]
 }
 
-const _Token_name = "eofnameliteralsemi or newline,:...->=${}[]ifelsematchrangeyieldopenenvexitwriteHEADOPTIONSGETPOSTPUTPATCHDELETE"
+const _Token_name = "eofnameliteralsemi or newline,:...->=${}[]ifelsematchrangeyield"
 
-var _Token_index = [...]uint8{0, 3, 7, 14, 29, 30, 31, 32, 34, 36, 37, 38, 39, 40, 41, 42, 44, 48, 53, 58, 63, 67, 70, 74, 79, 83, 90, 93, 97, 100, 105, 111}
+var _Token_index = [...]uint8{0, 3, 7, 14, 29, 30, 31, 32, 34, 36, 37, 38, 39, 40, 41, 42, 44, 48, 53, 58, 63}
 
 func (i Token) String() string {
 	i -= 1
