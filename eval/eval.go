@@ -3,6 +3,7 @@ package eval
 import (
 	"bytes"
 	"errors"
+	"hash/fnv"
 	"strconv"
 
 	"github.com/andrewpillar/req/syntax"
@@ -267,6 +268,47 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 			return nil, err
 		}
 		return cmd.Invoke(args)
+	case *syntax.MatchStmt:
+		obj, err := e.Eval(v.Cond)
+
+		if err != nil {
+			return nil, v.Err(err.Error())
+		}
+
+		jmptab := make(map[uint32]syntax.Node)
+
+		for _, stmt := range v.Cases {
+			h := fnv.New32a()
+
+			obj, err := e.Eval(stmt.Value)
+
+			if err != nil {
+				return nil, err
+			}
+
+			h.Write([]byte(obj.String()))
+
+			jmptab[h.Sum32()] = stmt.Then
+		}
+
+		if typ := obj.Type(); typ != String && typ != Int {
+			return nil, v.Err("cannot match against type " + typ.String())
+		}
+
+		h := fnv.New32a()
+		h.Write([]byte(obj.String()))
+
+		if n, ok := jmptab[h.Sum32()]; ok {
+			return e.Eval(n)
+		}
+		return nil, nil
+	case *syntax.YieldStmt:
+		obj, err := e.Eval(v.Value)
+
+		if err != nil {
+			return nil, v.Err(err.Error())
+		}
+		return obj, nil
 	case *syntax.ChainExpr:
 		var obj Object
 
