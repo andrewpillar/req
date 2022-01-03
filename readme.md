@@ -12,7 +12,7 @@ making the call,
     Token = env "GH_TOKEN";
 
     Headers = {
-        Authorization: "Bearer {$Token"},
+        Authorization: "Bearer {$Token}",
     };
 
     Resp = GET "{$Endpoint}/user" $Headers -> send;
