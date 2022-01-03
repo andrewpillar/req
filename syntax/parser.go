@@ -1,8 +1,10 @@
 package syntax
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/andrewpillar/req/token"
 )
@@ -11,6 +13,48 @@ type parser struct {
 	*scanner
 
 	errc int
+}
+
+type ParseError struct {
+	Pos token.Pos
+	Err error
+}
+
+func (e ParseError) Unwrap() error { return e.Err }
+
+func (e ParseError) Error() string {
+	return e.Pos.String() + " - " + e.Err.Error()
+}
+
+// ParseRef is a convenience function for parsing a single $Ref, $Ref.Dot,
+// or $Ref[Ind] expression. This is used as part of string interpolation. If
+// multiple errors occur during parsing, then the first of these errors is
+// returned.
+func ParseRef(s string) (Node, error) {
+	errs := make([]ParseError, 0)
+
+	p := parser{
+		scanner: newScanner(newSource("", strings.NewReader(s), func(pos token.Pos, msg string) {
+			errs = append(errs, ParseError{
+				Pos: pos,
+				Err: errors.New(msg),
+			})
+		})),
+	}
+
+	if p.tok != token.Ref {
+		return nil, ParseError{
+			Pos: p.pos,
+			Err: errors.New("expected $"),
+		}
+	}
+
+	n := p.ref()
+
+	if len(errs) > 0 {
+		return nil, errs[0]
+	}
+	return n, nil
 }
 
 func ParseFile(fname string, errh func(token.Pos, string)) ([]Node, error) {
@@ -166,6 +210,8 @@ loop:
 				p.unexpected(p.tok)
 				p.next()
 			}
+
+			p.want(token.Rbrack)
 			ref.Left = ind
 		default:
 			break loop
@@ -265,16 +311,6 @@ func (p *parser) casestmt() *CaseStmt {
 		node: p.node(),
 	}
 
-	if p.tok == token.Name {
-		if p.lit != "_" {
-			p.unexpected(p.tok)
-			p.next()
-			return nil
-		}
-		n.Value = p.name()
-		goto right
-	}
-
 	if p.tok != token.Literal {
 		p.unexpected(p.tok)
 		p.next()
@@ -283,7 +319,6 @@ func (p *parser) casestmt() *CaseStmt {
 
 	n.Value = p.literal()
 
-right:
 	p.want(token.Arrow)
 
 	switch p.tok {
@@ -322,6 +357,28 @@ func (p *parser) matchstmt() *MatchStmt {
 	p.want(token.Lbrace)
 
 	for p.tok != token.Rbrace {
+		if p.tok == token.Name {
+			if p.lit != "_" {
+				p.unexpected(token.Name)
+				p.advance(token.Rbrace, token.Semi)
+				continue
+			}
+
+			p.name()
+			p.want(token.Arrow)
+
+			switch p.tok {
+			case token.Lbrace:
+				n.Default = p.blockstmt()
+			case token.Name:
+				n.Default = p.command(p.name())
+			default:
+				p.unexpected(p.tok)
+				p.next()
+			}
+			continue
+		}
+
 		n.Cases = append(n.Cases, p.casestmt())
 
 		p.got(token.Semi)
@@ -433,6 +490,8 @@ func (p *parser) stmt(inBlock bool) Node {
 		}
 	case token.Match:
 		n = p.matchstmt()
+	case token.Ref:
+		n = p.ref()
 	case token.Yield:
 		if !inBlock {
 			p.err("yield outside of block statement")

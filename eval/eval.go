@@ -23,16 +23,25 @@ func (s *symtab) put(name nameObj, obj Object) {
 
 func (s *symtab) get(name nameObj) (Object, error) {
 	if s.tab == nil {
-		return nil, errors.New("undefined: " + name.value)
+		return nil, errors.New("undefined: $" + name.value)
 	}
 
 	obj, ok := s.tab[name.value]
 
 	if !ok {
-		return nil, errors.New("undefined: " + name.value)
+		return nil, errors.New("undefined: $" + name.value)
 	}
 	return obj, nil
 }
+
+type Error struct {
+	Pos token.Pos
+	Err error
+}
+
+func (e Error) Unwrap() error { return e.Err }
+
+func (e Error) Error() string { return e.Pos.String() + " - " + e.Err.Error() }
 
 type Evaluator struct {
 	cmds   map[string]*Command
@@ -55,10 +64,27 @@ func (e *Evaluator) interpolate(pos token.Pos, s string) (Object, error) {
 	for _, r := range s {
 		if r == '{' {
 			interpolate = true
+			continue
 		}
 
 		if r == '}' {
 			interpolate = false
+
+			n, err := syntax.ParseRef(string(expr))
+
+			if err != nil {
+				err = errors.Unwrap(err)
+
+				return nil, err
+			}
+
+			obj, err := e.Eval(n)
+
+			if err != nil {
+				return nil, err
+			}
+
+			buf.WriteString(obj.String())
 			expr = expr[0:0]
 			continue
 		}
@@ -76,7 +102,7 @@ func (e *Evaluator) resolveCommand(n *syntax.CommandStmt) (*Command, []Object, e
 	cmd, ok := e.cmds[n.Name.Value]
 
 	if !ok {
-		return nil, nil, n.Err("undefined command: " + n.Name.Value)
+		return nil, nil, errors.New("undefined command: " + n.Name.Value)
 	}
 
 	args := make([]Object, 0, len(n.Args))
@@ -85,7 +111,7 @@ func (e *Evaluator) resolveCommand(n *syntax.CommandStmt) (*Command, []Object, e
 		obj, err := e.Eval(arg)
 
 		if err != nil {
-			return nil, nil, arg.Err(err.Error())
+			return nil, nil, e.err(arg.Pos(), err)
 		}
 		args = append(args, obj)
 	}
@@ -135,19 +161,19 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 	left, err := e.Eval(n.Left)
 
 	if err != nil {
-		return nil, n.Left.Err(err.Error())
+		return nil, err
 	}
 
 	name, ok := left.(nameObj)
 
 	if !ok {
-		return nil, n.Left.Err("expected name")
+		return nil, errors.New("cannot use type " + left.Type().String() + " as selector")
 	}
 
 	obj, err := e.symtab.get(name)
 
 	if err != nil {
-		return nil, n.Err(err.Error())
+		return nil, err
 	}
 
 	sel, ok := obj.(Selector)
@@ -159,15 +185,49 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 	right, err := e.Eval(n.Right)
 
 	if err != nil {
-		return nil, n.Right.Err(err.Error())
+		return nil, err
 	}
 
 	obj, err = sel.Select(right)
 
 	if err != nil {
-		return nil, n.Err(err.Error())
+		return nil, err
 	}
 	return obj, nil
+}
+
+func (e *Evaluator) resolveInd(n *syntax.IndExpr) (Object, error) {
+	left, err := e.Eval(n.Left)
+
+	if err != nil {
+		return nil, err
+	}
+
+	right, err := e.Eval(n.Right)
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch left.Type() {
+	case Array:
+		return e.resolveArrayIndex(left, right)
+	case Hash:
+		return e.resolveHashKey(left, right)
+	default:
+		return nil, errors.New("type " + left.Type().String() + " does not support indexing")
+	}
+}
+
+func (e *Evaluator) err(pos token.Pos, err error) error {
+	if _, ok := err.(Error); ok {
+		return err
+	}
+
+	return Error{
+		Pos: pos,
+		Err: err,
+	}
 }
 
 func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
@@ -178,7 +238,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		obj, err := e.Eval(v.Value)
 
 		if err != nil {
-			return nil, v.Err(err.Error())
+			return nil, err
 		}
 		e.symtab.put(name, obj)
 	case *syntax.Ref:
@@ -189,39 +249,14 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		case *syntax.DotExpr:
 			return e.resolveDot(v)
 		case *syntax.IndExpr:
-			left, err := e.Eval(v.Left)
-
-			if err != nil {
-				return nil, v.Err(err.Error())
-			}
-
-			right, err := e.Eval(v.Right)
-
-			if err != nil {
-				return nil, v.Err(err.Error())
-			}
-
-			switch left.Type() {
-			case Array:
-				obj, err := e.resolveArrayIndex(left, right)
-
-				if err != nil {
-					return nil, v.Err(err.Error())
-				}
-				return obj, err
-			case Hash:
-				obj, err := e.resolveHashKey(left, right)
-
-				if err != nil {
-					return nil, v.Err(err.Error())
-				}
-				return obj, err
-			default:
-				return nil, v.Left.Err("type " + left.Type().String() + " does not support indexing")
-			}
+			return e.resolveInd(v)
 		default:
-			return nil, v.Err("invalid reference")
+			return nil, errors.New("invalid reference")
 		}
+	case *syntax.DotExpr:
+		return e.resolveDot(v)
+	case *syntax.IndExpr:
+		return e.resolveInd(v)
 	case *syntax.Lit:
 		switch v.Type {
 		case token.String:
@@ -246,7 +281,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 			obj, err := e.Eval(it)
 
 			if err != nil {
-				return nil, it.Err(err.Error())
+				return nil, err
 			}
 			items = append(items, obj)
 		}
@@ -258,7 +293,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 			obj, err := e.Eval(n.Value)
 
 			if err != nil {
-				return nil, n.Value.Err(err.Error())
+				return nil, err
 			}
 			pairs[n.Key.Value] = obj
 		}
@@ -266,7 +301,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 	case *syntax.BlockStmt:
 		for _, n := range v.Nodes {
 			if _, err := e.Eval(n); err != nil {
-				return nil, n.Err(err.Error())
+				return nil, err
 			}
 		}
 		return nil, nil
@@ -274,20 +309,20 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		cmd, args, err := e.resolveCommand(v)
 
 		if err != nil {
-			return nil, err
+			return nil, e.err(n.Pos(), err)
 		}
 
 		obj, err := cmd.Invoke(args)
 
 		if err != nil {
-			return nil, v.Err(err.Error())
+			return nil, err
 		}
 		return obj, nil
 	case *syntax.MatchStmt:
 		obj, err := e.Eval(v.Cond)
 
 		if err != nil {
-			return nil, v.Err(err.Error())
+			return nil, err
 		}
 
 		jmptab := make(map[uint32]syntax.Node)
@@ -307,7 +342,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		}
 
 		if typ := obj.Type(); typ != String && typ != Int {
-			return nil, v.Err("cannot match against type " + typ.String())
+			return nil, errors.New("cannot match against type " + typ.String())
 		}
 
 		h := fnv.New32a()
@@ -316,14 +351,11 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		if n, ok := jmptab[h.Sum32()]; ok {
 			return e.Eval(n)
 		}
-		return nil, nil
-	case *syntax.YieldStmt:
-		obj, err := e.Eval(v.Value)
 
-		if err != nil {
-			return nil, v.Err(err.Error())
+		if v.Default != nil {
+			return e.Eval(v.Default)
 		}
-		return obj, nil
+		return nil, nil
 	case *syntax.ChainExpr:
 		var obj Object
 
@@ -331,7 +363,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 			cmd, args, err := e.resolveCommand(n)
 
 			if err != nil {
-				return nil, n.Err(err.Error())
+				return nil, err
 			}
 
 			if obj != nil {
@@ -341,7 +373,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 			obj, err = cmd.Invoke(args)
 
 			if err != nil {
-				return nil, n.Err(err.Error())
+				return nil, err
 			}
 		}
 		return obj, nil

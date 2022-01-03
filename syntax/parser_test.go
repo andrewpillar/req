@@ -175,6 +175,14 @@ func checkMatchStmt(t *testing.T, expected, actual *MatchStmt) {
 		checkNode(t, expected.Cond, actual.Cond)
 	}
 
+	if expected.Default != nil {
+		if expected.Default == nil {
+			t.Errorf("%s - expected Default for MatchStmt\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Default, actual.Default)
+	}
+
 	if len(expected.Cases) != len(actual.Cases) {
 		t.Errorf("%s - unexpected MatchStmt.Cases length, expected=%d, got=%d\n", actual.Pos(), len(expected.Cases), len(actual.Cases))
 		return
@@ -349,6 +357,65 @@ func checkNode(t *testing.T, expected, actual Node) {
 	}
 }
 
+func Test_ParseRef(t *testing.T) {
+	tests := []struct {
+		expr     string
+		expected *Ref
+	}{
+		{
+			"$Resp.Body",
+			&Ref{
+				Left: &DotExpr{
+					Left:  &Name{Value: "Resp"},
+					Right: &Name{Value: "Body"},
+				},
+			},
+		},
+		{
+			`$Resp.Header["Content-Type"]`,
+			&Ref{
+				Left: &IndExpr{
+					Left: &DotExpr{
+						Left:  &Name{Value: "Resp"},
+						Right: &Name{Value: "Header"},
+					},
+					Right: &Lit{Type: token.String, Value: "Content-Type"},
+				},
+			},
+		},
+		{
+			"$Resp.Status.Code",
+			&Ref{
+				Left: &DotExpr{
+					Left: &DotExpr{
+						Left:  &Name{Value: "Resp"},
+						Right: &Name{Value: "Status"},
+					},
+					Right: &Name{Value: "Code"},
+				},
+			},
+		},
+	}
+
+	for i, test := range tests {
+		n, err := ParseRef(test.expr)
+
+		if err != nil {
+			t.Errorf("tests[%d] - %s\n", i, err)
+			continue
+		}
+
+		ref, ok := n.(*Ref)
+
+		if !ok {
+			t.Errorf("tests[%d] - unexpected node type, expected=%T, got=%T\n", i, &Ref{}, n)
+			continue
+		}
+
+		checkRef(t, test.expected, ref)
+	}
+}
+
 func Test_Parser(t *testing.T) {
 	nn, err := ParseFile(filepath.Join("testdata", "gh.req"), errh(t))
 
@@ -465,23 +532,20 @@ func Test_Parser(t *testing.T) {
 						},
 					},
 				},
-				{
-					Value: &Name{Value: "_"},
-					Then: &BlockStmt{
-						Nodes: []Node{
-							&CommandStmt{
-								Name: &Name{Value: "print"},
-								Args: []Node{
-									&Ref{
-										Left: &DotExpr{
-											Left:  &Name{Value: "Resp"},
-											Right: &Name{Value: "Body"},
-										},
-									},
-									&Ref{
-										Left: &Name{Value: "Stderr"},
-									},
+			},
+			Default: &BlockStmt{
+				Nodes: []Node{
+					&CommandStmt{
+						Name: &Name{Value: "print"},
+						Args: []Node{
+							&Ref{
+								Left: &DotExpr{
+									Left:  &Name{Value: "Resp"},
+									Right: &Name{Value: "Body"},
 								},
+							},
+							&Ref{
+								Left: &Name{Value: "Stderr"},
 							},
 						},
 					},

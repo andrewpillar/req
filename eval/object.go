@@ -133,7 +133,11 @@ type streamObj struct {
 }
 
 func (s streamObj) String() string {
-	return fmt.Sprintf("Stream<addr=%p>", s.rs)
+	var buf bytes.Buffer
+
+	buf.ReadFrom(s.rs)
+
+	return buf.String()
 }
 
 func (s streamObj) Type() Type { return Stream }
@@ -184,7 +188,10 @@ func (r reqObj) Select(obj Object) (Object, error) {
 		}
 		return hash, nil
 	case "Body":
-		b, _ := io.ReadAll(r.Body)
+		rc, rc2 := copyrc(r.Body)
+		r.Body = rc
+
+		b, _ := io.ReadAll(rc2)
 
 		return streamObj{rs: bytes.NewReader(b)}, nil
 	default:
@@ -245,7 +252,10 @@ func (r respObj) Select(obj Object) (Object, error) {
 		}
 		return hash, nil
 	case "Body":
-		b, _ := io.ReadAll(r.Body)
+		rc, rc2 := copyrc(r.Body)
+		r.Body = rc
+
+		b, _ := io.ReadAll(rc2)
 
 		return streamObj{rs: bytes.NewReader(b)}, nil
 	default:

@@ -106,8 +106,9 @@ type CaseStmt struct {
 type MatchStmt struct {
 	node
 
-	Cond  Node
-	Cases []*CaseStmt
+	Cond    Node
+	Cases   []*CaseStmt
+	Default Node
 }
 
 type YieldStmt struct {
