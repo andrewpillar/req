@@ -19,7 +19,11 @@ func (p Pos) String() string {
 	s := p.File
 
 	if p.Line > 0 {
-		s += "," + strconv.FormatInt(int64(p.Line), 10)
+		if p.File != "" {
+			s += ","
+		}
+
+		s += strconv.FormatInt(int64(p.Line), 10)
 
 		if p.Col > 0 {
 			s += ":" + strconv.FormatInt(int64(p.Col), 10)
