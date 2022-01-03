@@ -44,8 +44,9 @@ func (e Error) Unwrap() error { return e.Err }
 func (e Error) Error() string { return e.Pos.String() + " - " + e.Err.Error() }
 
 type Evaluator struct {
-	cmds   map[string]*Command
-	symtab symtab
+	cmds       map[string]*Command
+	symtab     symtab
+	finalizers []func()error
 }
 
 func (e *Evaluator) AddCmd(cmd *Command) {
@@ -317,6 +318,10 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if f, ok := obj.(fileObj); ok {
+			e.finalizers = append(e.finalizers, f.Close)
+		}
 		return obj, nil
 	case *syntax.MatchStmt:
 		obj, err := e.Eval(v.Cond)
@@ -387,6 +392,10 @@ func (e *Evaluator) Run(nn []syntax.Node) error {
 		if _, err := e.Eval(n); err != nil {
 			return err
 		}
+	}
+
+	for _, fn := range e.finalizers {
+		fn()
 	}
 	return nil
 }
