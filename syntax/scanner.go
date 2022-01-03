@@ -65,37 +65,30 @@ func (sc *scanner) number() {
 func (sc *scanner) string() {
 	sc.startLit()
 
-	skip := false
 	interpolate := false
-
 	r := sc.get()
 
 	for {
 		if r == '"' {
-			if skip {
-				skip = false
-				continue
+			if !interpolate {
+				break
 			}
-
-			if interpolate {
-				continue
-			}
-			break
 		}
+		if r == '\\' {
+			r = sc.get()
 
+			if r == '"' {
+				r = sc.get()
+			}
+			continue
+		}
 		if r == '\n' {
 			sc.err("unexpected newline in string")
 			break
 		}
-
-		if r == '\\' {
-			skip = !skip
-		}
-
 		if r == '{' {
 			interpolate = true
 		}
-
 		if r == '}' {
 			interpolate = false
 		}
