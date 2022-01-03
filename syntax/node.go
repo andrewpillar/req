@@ -12,7 +12,7 @@ type node struct {
 	pos token.Pos
 }
 
-func (n node) Pos() token.Pos {	return n.pos }
+func (n node) Pos() token.Pos { return n.pos }
 
 func (n node) Err(msg string) error {
 	return n.pos.Err(msg)
@@ -21,7 +21,7 @@ func (n node) Err(msg string) error {
 type VarDecl struct {
 	node
 
-	Name *Name
+	Name  *Name
 	Value Node
 }
 
