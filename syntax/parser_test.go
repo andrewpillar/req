@@ -358,7 +358,7 @@ func Test_Parser(t *testing.T) {
 
 	expected := []Node{
 		&VarDecl{
-			Name:  &Name{Value: "Stdout"},
+			Name: &Name{Value: "Stdout"},
 			Value: &CommandStmt{
 				Name: &Name{Value: "open"},
 				Args: []Node{
@@ -370,7 +370,7 @@ func Test_Parser(t *testing.T) {
 			},
 		},
 		&VarDecl{
-			Name:  &Name{Value: "Stderr"},
+			Name: &Name{Value: "Stderr"},
 			Value: &CommandStmt{
 				Name: &Name{Value: "open"},
 				Args: []Node{
@@ -382,14 +382,14 @@ func Test_Parser(t *testing.T) {
 			},
 		},
 		&VarDecl{
-			Name:  &Name{Value: "Endpoint"},
+			Name: &Name{Value: "Endpoint"},
 			Value: &Lit{
 				Type:  token.String,
 				Value: "https://api.github.com",
 			},
 		},
 		&VarDecl{
-			Name:  &Name{Value: "Token"},
+			Name: &Name{Value: "Token"},
 			Value: &CommandStmt{
 				Name: &Name{Value: "env"},
 				Args: []Node{
@@ -401,29 +401,29 @@ func Test_Parser(t *testing.T) {
 			},
 		},
 		&VarDecl{
-			Name:  &Name{Value: "Resp"},
+			Name: &Name{Value: "Resp"},
 			Value: &ChainExpr{
 				Commands: []*CommandStmt{
-					&CommandStmt{
+					{
 						Name: &Name{Value: "GET"},
 						Args: []Node{
 							&Lit{
-								Type: token.String,
+								Type:  token.String,
 								Value: "{$Endpoint}/user",
 							},
 							&Object{
 								Pairs: []*KeyExpr{
-									&KeyExpr{
+									{
 										Key: &Name{Value: "Authorization"},
 										Value: &Lit{
-											Type: token.String,
+											Type:  token.String,
 											Value: "Bearer {$Token}",
 										},
 									},
-									&KeyExpr{
+									{
 										Key: &Name{Value: "Content-Type"},
 										Value: &Lit{
-											Type: token.String,
+											Type:  token.String,
 											Value: "application/json; charset=utf-8",
 										},
 									},
@@ -431,48 +431,55 @@ func Test_Parser(t *testing.T) {
 							},
 						},
 					},
-					&CommandStmt{
+					{
 						Name: &Name{Value: "send"},
 					},
 				},
 			},
 		},
-		&CommandStmt{
-			Name: &Name{Value: "print"},
-			Args: []Node{
-				&Ref{
-					Left: &DotExpr{
-						Left:  &Name{Value: "Resp"},
-						Right: &Name{Value: "Body"},
-					},
+		&MatchStmt{
+			Cond: &Ref{
+				Left: &DotExpr{
+					Left:  &Name{Value: "Resp"},
+					Right: &Name{Value: "StatusCode"},
 				},
-				&MatchStmt{
-					Cond: &Ref{
-						Left: &DotExpr{
-							Left:  &Name{Value: "Resp"},
-							Right: &Name{Value: "StatusCode"},
-						},
+			},
+			Cases: []*CaseStmt{
+				{
+					Value: &Lit{
+						Type:  token.Int,
+						Value: "200",
 					},
-					Cases: []*CaseStmt{
-						&CaseStmt{
-							Value: &Lit{
-								Type:  token.Int,
-								Value: "200",
-							},
-							Then: &YieldStmt{
-								Value: &Ref{
-									Left: &Name{Value: "Stdout"},
+					Then: &CommandStmt{
+						Name: &Name{Value: "print"},
+						Args: []Node{
+							&Ref{
+								Left: &DotExpr{
+									Left:  &Name{Value: "Resp"},
+									Right: &Name{Value: "Body"},
 								},
 							},
+							&Ref{
+								Left: &Name{Value: "Stdout"},
+							},
 						},
-						&CaseStmt{
-							Value: &Name{Value: "_"},
-							Then: &BlockStmt{
-								Nodes: []Node{
-									&YieldStmt{
-										Value: &Ref{
-											Left: &Name{Value: "Stderr"},
+					},
+				},
+				{
+					Value: &Name{Value: "_"},
+					Then: &BlockStmt{
+						Nodes: []Node{
+							&CommandStmt{
+								Name: &Name{Value: "print"},
+								Args: []Node{
+									&Ref{
+										Left: &DotExpr{
+											Left:  &Name{Value: "Resp"},
+											Right: &Name{Value: "Body"},
 										},
+									},
+									&Ref{
+										Left: &Name{Value: "Stderr"},
 									},
 								},
 							},

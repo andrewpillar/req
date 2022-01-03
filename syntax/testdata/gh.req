@@ -11,9 +11,9 @@ Resp = GET "{$Endpoint}/user" {
 	Content-Type: "application/json; charset=utf-8",
 } -> send;
 
-print $Resp.Body match $Resp.StatusCode {
-	200 -> yield $Stdout,
+match $Resp.StatusCode {
+	200 -> print $Resp.Body $Stdout;
 	_   -> {
-		yield $Stderr;
-	},
+		print $Resp.Body $Stderr;
+	}
 }

@@ -25,11 +25,23 @@ func ParseFile(fname string, errh func(token.Pos, string)) ([]Node, error) {
 	p := parser{
 		scanner: newScanner(newSource(fname, f, errh)),
 	}
+	return p.parse()
+}
 
-	if p.errc > 0 {
-		return nil, fmt.Errorf("parser encountered %d error(s)", p.errc)
+func (p *parser) advance(follow ...token.Token) {
+	set := make(map[token.Token]struct{})
+
+	for _, tok := range follow {
+		set[tok] = struct{}{}
 	}
-	return p.parse(), nil
+	set[token.EOF] = struct{}{}
+
+	for {
+		if _, ok := set[p.tok]; ok {
+			break
+		}
+		p.next()
+	}
 }
 
 func (p *parser) got(tok token.Token) bool {
@@ -184,7 +196,7 @@ func (p *parser) obj() *Object {
 	p.list(token.Comma, token.Rbrace, func() {
 		if p.tok != token.Name {
 			p.expected(token.Name)
-			p.next()
+			p.advance(token.Rbrace, token.Semi)
 			return
 		}
 
@@ -256,6 +268,7 @@ func (p *parser) casestmt() *CaseStmt {
 	if p.tok == token.Name {
 		if p.lit != "_" {
 			p.unexpected(p.tok)
+			p.next()
 			return nil
 		}
 		n.Value = p.name()
@@ -264,6 +277,7 @@ func (p *parser) casestmt() *CaseStmt {
 
 	if p.tok != token.Literal {
 		p.unexpected(p.tok)
+		p.next()
 		return nil
 	}
 
@@ -275,10 +289,11 @@ right:
 	switch p.tok {
 	case token.Lbrace:
 		n.Then = p.blockstmt()
-	case token.Yield:
-		n.Then = p.yield()
+	case token.Name:
+		n.Then = p.command(p.name())
 	default:
 		p.unexpected(p.tok)
+		p.next()
 	}
 	return n
 }
@@ -309,12 +324,7 @@ func (p *parser) matchstmt() *MatchStmt {
 	for p.tok != token.Rbrace {
 		n.Cases = append(n.Cases, p.casestmt())
 
-		if p.tok != token.Comma && p.tok != token.Rbrace {
-			p.err("expected comma or }")
-			p.next()
-			continue
-		}
-		p.got(token.Comma)
+		p.got(token.Semi)
 	}
 
 	p.got(token.Rbrace)
@@ -329,7 +339,7 @@ func (p *parser) chain(cmd *CommandStmt) *ChainExpr {
 	for p.tok != token.Semi && p.tok != token.EOF {
 		if p.tok != token.Name {
 			p.expected(token.Name)
-			p.next()
+			p.advance(token.Semi)
 			continue
 		}
 
@@ -357,7 +367,7 @@ func (p *parser) operand() Node {
 		n = p.arr()
 	default:
 		p.unexpected(p.tok)
-		p.next()
+		p.advance(token.Rbrace, token.Semi)
 	}
 	return n
 }
@@ -371,8 +381,6 @@ func (p *parser) expr() Node {
 			return p.chain(n)
 		}
 		return n
-	case token.Match:
-		return p.matchstmt()
 	default:
 		return p.operand()
 	}
@@ -380,12 +388,12 @@ func (p *parser) expr() Node {
 
 func (p *parser) command(name *Name) *CommandStmt {
 	n := &CommandStmt{
-		node: p.node(),
+		node: name.node,
 		Name: name,
 	}
 
 	for p.tok != token.Arrow && p.tok != token.Semi && p.tok != token.EOF {
-		n.Args = append(n.Args, p.expr())
+		n.Args = append(n.Args, p.operand())
 	}
 	return n
 }
@@ -428,13 +436,13 @@ func (p *parser) stmt(inBlock bool) Node {
 	case token.Yield:
 		if !inBlock {
 			p.err("yield outside of block statement")
-			p.next()
+			p.advance(token.Semi)
 			break
 		}
 		n = p.yield()
 	default:
 		p.unexpected(p.tok)
-		p.next()
+		p.advance(token.Semi)
 	}
 
 	if p.tok != token.EOF {
@@ -445,11 +453,15 @@ func (p *parser) stmt(inBlock bool) Node {
 	return n
 }
 
-func (p *parser) parse() []Node {
+func (p *parser) parse() ([]Node, error) {
 	nn := make([]Node, 0)
 
 	for p.tok != token.EOF {
 		nn = append(nn, p.stmt(false))
 	}
-	return nn
+
+	if p.errc > 0 {
+		return nil, fmt.Errorf("parser encountered %d error(s)", p.errc)
+	}
+	return nn, nil
 }

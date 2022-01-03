@@ -66,11 +66,6 @@ func Test_Scanner(t *testing.T) {
 		{token.Arrow, token.Type(0), ""},
 		{token.Name, token.Type(0), "send"},
 		{token.Semi, token.Type(0), ""},
-		{token.Name, token.Type(0), "print"},
-		{token.Ref, token.Type(0), ""},
-		{token.Name, token.Type(0), "Resp"},
-		{token.Dot, token.Type(0), ""},
-		{token.Name, token.Type(0), "Body"},
 		{token.Match, token.Type(0), "match"},
 		{token.Ref, token.Type(0), ""},
 		{token.Name, token.Type(0), "Resp"},
@@ -79,32 +74,39 @@ func Test_Scanner(t *testing.T) {
 		{token.Lbrace, token.Type(0), ""},
 		{token.Literal, token.Int, "200"},
 		{token.Arrow, token.Type(0), ""},
-		{token.Yield, token.Type(0), "yield"},
+		{token.Name, token.Type(0), "print"},
+		{token.Ref, token.Type(0), ""},
+		{token.Name, token.Type(0), "Resp"},
+		{token.Dot, token.Type(0), ""},
+		{token.Name, token.Type(0), "Body"},
 		{token.Ref, token.Type(0), ""},
 		{token.Name, token.Type(0), "Stdout"},
-		{token.Comma, token.Type(0), ""},
+		{token.Semi, token.Type(0), ""},
 		{token.Name, token.Type(0), "_"},
 		{token.Arrow, token.Type(0), ""},
 		{token.Lbrace, token.Type(0), ""},
-		{token.Yield, token.Type(0), "yield"},
+		{token.Name, token.Type(0), "print"},
+		{token.Ref, token.Type(0), ""},
+		{token.Name, token.Type(0), "Resp"},
+		{token.Dot, token.Type(0), ""},
+		{token.Name, token.Type(0), "Body"},
 		{token.Ref, token.Type(0), ""},
 		{token.Name, token.Type(0), "Stderr"},
 		{token.Semi, token.Type(0), ""},
 		{token.Rbrace, token.Type(0), ""},
-		{token.Comma, token.Type(0), ""},
 		{token.Rbrace, token.Type(0), ""},
 		{token.EOF, token.Type(0), ""},
 	}
 
 	for i, test := range tests {
 		if sc.tok != test.tok {
-			t.Fatalf("tests[%d] - unexpected token, expected=%q, got=%q\n", i, test.tok, sc.tok)
+			t.Fatalf("tests[%d] - unexpected token at %s, expected=%q, got=%q\n", i, sc.pos, test.tok, sc.tok)
 		}
 		if sc.typ != test.typ {
-			t.Fatalf("tests[%d] - unexpected type, expected=%q, got=%q\n", i, test.typ, sc.typ)
+			t.Fatalf("tests[%d] - unexpected type at %s, expected=%q, got=%q\n", i, sc.pos, test.typ, sc.typ)
 		}
 		if sc.lit != test.lit {
-			t.Fatalf("tests[%d] - unexpected literal, expected=%q, got=%q\n", i, test.lit, sc.lit)
+			t.Fatalf("tests[%d] - unexpected literal at %s, expected=%q, got=%q\n", i, sc.pos, test.lit, sc.lit)
 		}
 
 		t.Log(sc.pos, sc.tok, sc.typ, sc.lit)
