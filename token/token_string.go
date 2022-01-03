@@ -27,12 +27,11 @@ func _() {
 	_ = x[Else-17]
 	_ = x[Match-18]
 	_ = x[Range-19]
-	_ = x[Yield-20]
 }
 
-const _Token_name = "eofnameliteralsemi or newline,:...->=${}[]ifelsematchrangeyield"
+const _Token_name = "eofnameliteralsemi or newline,:...->=${}[]ifelsematchrange"
 
-var _Token_index = [...]uint8{0, 3, 7, 14, 29, 30, 31, 32, 34, 36, 37, 38, 39, 40, 41, 42, 44, 48, 53, 58, 63}
+var _Token_index = [...]uint8{0, 3, 7, 14, 29, 30, 31, 32, 34, 36, 37, 38, 39, 40, 41, 42, 44, 48, 53, 58}
 
 func (i Token) String() string {
 	i -= 1

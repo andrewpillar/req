@@ -59,7 +59,6 @@ const (
 	Else  // else
 	Match // match
 	Range // range
-	Yield // yield
 )
 
 type Type uint
@@ -76,7 +75,6 @@ var keywords = map[string]Token{
 	"else":  Else,
 	"match": Match,
 	"range": Range,
-	"yield": Yield,
 }
 
 func Lookup(s string) Token {

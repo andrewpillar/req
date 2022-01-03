@@ -294,18 +294,6 @@ func (p *parser) blockstmt() *BlockStmt {
 	return n
 }
 
-func (p *parser) yield() *YieldStmt {
-	if !p.got(token.Yield) {
-		return nil
-	}
-
-	n := &YieldStmt{
-		node:  p.node(),
-		Value: p.operand(),
-	}
-	return n
-}
-
 func (p *parser) casestmt() *CaseStmt {
 	n := &CaseStmt{
 		node: p.node(),
@@ -492,13 +480,6 @@ func (p *parser) stmt(inBlock bool) Node {
 		n = p.matchstmt()
 	case token.Ref:
 		n = p.ref()
-	case token.Yield:
-		if !inBlock {
-			p.err("yield outside of block statement")
-			p.advance(token.Semi)
-			break
-		}
-		n = p.yield()
 	default:
 		p.unexpected(p.tok)
 		p.advance(token.Semi)
