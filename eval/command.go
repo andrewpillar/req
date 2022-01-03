@@ -119,7 +119,7 @@ func open(args []Object) (Object, error) {
 		}
 	}
 
-	f, err := os.OpenFile(str.value, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.FileMode(0644))
+	f, err := os.OpenFile(str.value, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0644))
 
 	if err != nil {
 		return nil, CommandError{
@@ -415,4 +415,34 @@ func send(args []Object) (Object, error) {
 	return respObj{
 		Response: resp,
 	}, nil
+}
+
+var SniffCmd = &Command{
+	Name: "sniff",
+	Argc: 1,
+	Func: sniff,
+}
+
+func sniff(args []Object) (Object, error) {
+	val := args[0]
+
+	var rs io.ReadSeeker
+
+	switch v := val.(type) {
+	case streamObj:
+		rs = v.rs
+	case fileObj:
+		rs = v.File
+	default:
+		return nil, errors.New("cannot use type " + val.Type().String() + " as stream or file")
+	}
+
+	hdr := make([]byte, 512)
+
+	rs.Read(hdr)
+	rs.Seek(0, io.SeekStart)
+
+	mime := http.DetectContentType(hdr)
+
+	return stringObj{value: mime}, nil
 }

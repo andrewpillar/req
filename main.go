@@ -93,6 +93,7 @@ func main() {
 			e.AddCmd(eval.PatchCmd)
 			e.AddCmd(eval.DeleteCmd)
 			e.AddCmd(eval.SendCmd)
+			e.AddCmd(eval.SniffCmd)
 
 			if err := e.Run(nn); err != nil {
 				errs <- err
