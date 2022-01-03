@@ -154,7 +154,7 @@ func (r reqObj) String() string {
 	r.Header.Write(&buf)
 
 	if r.Body != nil {
-		buf.WriteString("\n\n")
+		buf.WriteString("\n")
 
 		rc, rc2 := copyrc(r.Body)
 
@@ -220,7 +220,7 @@ func (r respObj) String() string {
 	r.Body = rc
 
 	r.Header.Write(&buf)
-	buf.WriteString("\n\n")
+	buf.WriteString("\n")
 	io.Copy(&buf, rc2)
 
 	return buf.String()
