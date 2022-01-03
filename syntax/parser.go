@@ -364,6 +364,7 @@ func (p *parser) matchstmt() *MatchStmt {
 				p.unexpected(p.tok)
 				p.next()
 			}
+			p.got(token.Semi)
 			continue
 		}
 
