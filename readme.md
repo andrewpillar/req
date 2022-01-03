@@ -24,3 +24,9 @@ making the call,
             exit 1;
         }
     }
+
+this would then be run like so, as long as the given file is saved with the
+`*.req` suffix and is in the current directory from which req is invoked, then
+it will be evaluated.
+
+    $ GH_TOKEN=<token> req
