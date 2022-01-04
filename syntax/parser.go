@@ -466,6 +466,7 @@ func (p *parser) stmt(inBlock bool) Node {
 		}
 	case token.Match:
 		n = p.matchstmt()
+		return n
 	default:
 		p.unexpected(p.tok)
 		p.advance(token.Semi)
