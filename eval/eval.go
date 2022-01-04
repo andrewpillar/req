@@ -10,28 +10,45 @@ import (
 	"github.com/andrewpillar/req/token"
 )
 
-type symtab struct {
-	tab map[string]Object
+type Context struct {
+	symtab map[string]Object
 }
 
-func (s *symtab) put(name nameObj, obj Object) {
-	if s.tab == nil {
-		s.tab = make(map[string]Object)
+func (c *Context) Put(name string, obj Object) {
+	if c.symtab == nil {
+		c.symtab = make(map[string]Object)
 	}
-	s.tab[name.value] = obj
+	c.symtab[name] = obj
 }
 
-func (s *symtab) get(name nameObj) (Object, error) {
-	if s.tab == nil {
-		return nil, errors.New("undefined: $" + name.value)
+type errUndefined struct {
+	name string
+}
+
+func (e errUndefined) Error() string { return "undefined: $" + e.name }
+
+func (c *Context) Get(name string) (Object, error) {
+	if c.symtab == nil {
+		return nil, errUndefined{name: name}
 	}
 
-	obj, ok := s.tab[name.value]
+	obj, ok := c.symtab[name]
 
 	if !ok {
-		return nil, errors.New("undefined: $" + name.value)
+		return nil, errUndefined{name: name}
 	}
 	return obj, nil
+}
+
+func (c *Context) Copy() *Context {
+	c2 := &Context{
+		symtab: make(map[string]Object),
+	}
+
+	for k, v := range c.symtab {
+		c2.symtab[k] = v
+	}
+	return c2
 }
 
 type Error struct {
@@ -45,7 +62,6 @@ func (e Error) Error() string { return e.Pos.String() + " - " + e.Err.Error() }
 
 type Evaluator struct {
 	cmds       map[string]*Command
-	symtab     symtab
 	finalizers []func()error
 }
 
@@ -56,7 +72,7 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 	e.cmds[cmd.Name] = cmd
 }
 
-func (e *Evaluator) interpolate(s string) (Object, error) {
+func (e *Evaluator) interpolate(c *Context, s string) (Object, error) {
 	var buf bytes.Buffer
 
 	interpolate := false
@@ -77,7 +93,7 @@ func (e *Evaluator) interpolate(s string) (Object, error) {
 				return nil, err
 			}
 
-			obj, err := e.Eval(n)
+			obj, err := e.Eval(c, n)
 
 			if err != nil {
 				return nil, err
@@ -97,7 +113,7 @@ func (e *Evaluator) interpolate(s string) (Object, error) {
 	return stringObj{value: buf.String()}, nil
 }
 
-func (e *Evaluator) resolveCommand(n *syntax.CommandStmt) (*Command, []Object, error) {
+func (e *Evaluator) resolveCommand(c *Context, n *syntax.CommandStmt) (*Command, []Object, error) {
 	cmd, ok := e.cmds[n.Name.Value]
 
 	if !ok {
@@ -107,7 +123,7 @@ func (e *Evaluator) resolveCommand(n *syntax.CommandStmt) (*Command, []Object, e
 	args := make([]Object, 0, len(n.Args))
 
 	for _, arg := range n.Args {
-		obj, err := e.Eval(arg)
+		obj, err := e.Eval(c, arg)
 
 		if err != nil {
 			return nil, nil, e.err(arg.Pos(), err)
@@ -156,8 +172,8 @@ func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 	return obj, nil
 }
 
-func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
-	left, err := e.Eval(n.Left)
+func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (Object, error) {
+	left, err := e.Eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
@@ -169,7 +185,7 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 		return nil, errors.New("cannot use type " + left.Type().String() + " as selector")
 	}
 
-	obj, err := e.symtab.get(name)
+	obj, err := c.Get(name.value)
 
 	if err != nil {
 		return nil, err
@@ -181,7 +197,7 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 		return nil, errors.New("cannot use type " + obj.Type().String() + " as selector")
 	}
 
-	right, err := e.Eval(n.Right)
+	right, err := e.Eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
@@ -195,14 +211,14 @@ func (e *Evaluator) resolveDot(n *syntax.DotExpr) (Object, error) {
 	return obj, nil
 }
 
-func (e *Evaluator) resolveInd(n *syntax.IndExpr) (Object, error) {
-	left, err := e.Eval(n.Left)
+func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
+	left, err := e.Eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
 	}
 
-	right, err := e.Eval(n.Right)
+	right, err := e.Eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
@@ -229,12 +245,10 @@ func (e *Evaluator) err(pos token.Pos, err error) error {
 	}
 }
 
-func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
+func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
-		name := nameObj{value: v.Name.Value}
-
-		obj, err := e.Eval(v.Value)
+		obj, err := e.Eval(c, v.Value)
 
 		if err != nil {
 			return nil, e.err(v.Value.Pos(), err)
@@ -243,27 +257,25 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		if obj == nil {
 			return nil, e.err(v.Value.Pos(), errors.New("does not evaluate to value"))
 		}
-		e.symtab.put(name, obj)
+		c.Put(v.Name.Value, obj)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
 		case *syntax.Name:
-			name := nameObj{value: v.Value}
-
-			obj, err := e.symtab.get(name)
+			obj, err := c.Get(v.Value)
 
 			if err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
 			return obj, nil
 		case *syntax.DotExpr:
-			obj, err := e.resolveDot(v)
+			obj, err := e.resolveDot(c, v)
 
 			if err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
 			return obj, nil
 		case *syntax.IndExpr:
-			obj, err := e.resolveInd(v)
+			obj, err := e.resolveInd(c, v)
 
 			if err != nil {
 				return nil, e.err(v.Pos(), err)
@@ -273,14 +285,14 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 			return nil, errors.New("invalid reference")
 		}
 	case *syntax.DotExpr:
-		obj, err := e.resolveDot(v)
+		obj, err := e.resolveDot(c, v)
 
 		if err != nil {
 			return nil, e.err(v.Pos(), err)
 		}
 		return obj, nil
 	case *syntax.IndExpr:
-		obj, err := e.resolveInd(v)
+		obj, err := e.resolveInd(c, v)
 
 		if err != nil {
 			return nil, e.err(v.Pos(), err)
@@ -289,7 +301,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 	case *syntax.Lit:
 		switch v.Type {
 		case token.String:
-			obj, err := e.interpolate(v.Value)
+			obj, err := e.interpolate(c, v.Value)
 
 			if err != nil {
 				// Offset original position of string so we report the position
@@ -318,7 +330,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		items := make([]Object, 0, len(v.Items))
 
 		for _, it := range v.Items {
-			obj, err := e.Eval(it)
+			obj, err := e.Eval(c, it)
 
 			if err != nil {
 				return nil, err
@@ -330,7 +342,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		pairs := make(map[string]Object)
 
 		for _, n := range v.Pairs {
-			obj, err := e.Eval(n.Value)
+			obj, err := e.Eval(c, n.Value)
 
 			if err != nil {
 				return nil, err
@@ -339,14 +351,16 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		}
 		return hashObj{pairs: pairs}, nil
 	case *syntax.BlockStmt:
+		c2 := c.Copy()
+
 		for _, n := range v.Nodes {
-			if _, err := e.Eval(n); err != nil {
+			if _, err := e.Eval(c2, n); err != nil {
 				return nil, err
 			}
 		}
 		return nil, nil
 	case *syntax.CommandStmt:
-		cmd, args, err := e.resolveCommand(v)
+		cmd, args, err := e.resolveCommand(c, v)
 
 		if err != nil {
 			return nil, e.err(n.Pos(), err)
@@ -363,7 +377,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		}
 		return obj, nil
 	case *syntax.MatchStmt:
-		obj, err := e.Eval(v.Cond)
+		obj, err := e.Eval(c, v.Cond)
 
 		if err != nil {
 			return nil, err
@@ -374,7 +388,7 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		for _, stmt := range v.Cases {
 			h := fnv.New32a()
 
-			obj, err := e.Eval(stmt.Value)
+			obj, err := e.Eval(c, stmt.Value)
 
 			if err != nil {
 				return nil, err
@@ -393,18 +407,18 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		h.Write([]byte(obj.String()))
 
 		if n, ok := jmptab[h.Sum32()]; ok {
-			return e.Eval(n)
+			return e.Eval(c, n)
 		}
 
 		if v.Default != nil {
-			return e.Eval(v.Default)
+			return e.Eval(c, v.Default)
 		}
 		return nil, nil
 	case *syntax.ChainExpr:
 		var obj Object
 
 		for _, n := range v.Commands {
-			cmd, args, err := e.resolveCommand(n)
+			cmd, args, err := e.resolveCommand(c, n)
 
 			if err != nil {
 				return nil, err
@@ -427,8 +441,10 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 }
 
 func (e *Evaluator) Run(nn []syntax.Node) error {
+	var c Context
+
 	for _, n := range nn {
-		if _, err := e.Eval(n); err != nil {
+		if _, err := e.Eval(&c, n); err != nil {
 			return err
 		}
 	}
