@@ -133,6 +133,10 @@ type streamObj struct {
 }
 
 func (s streamObj) String() string {
+	if s.rs == nil {
+		return ""
+	}
+
 	var buf bytes.Buffer
 
 	buf.ReadFrom(s.rs)
@@ -188,6 +192,10 @@ func (r reqObj) Select(obj Object) (Object, error) {
 		}
 		return hash, nil
 	case "Body":
+		if r.Body == nil {
+			return streamObj{}, nil
+		}
+
 		rc, rc2 := copyrc(r.Body)
 		r.Body = rc
 
@@ -252,6 +260,10 @@ func (r respObj) Select(obj Object) (Object, error) {
 		}
 		return hash, nil
 	case "Body":
+		if r.Body == nil {
+			return streamObj{}, nil
+		}
+
 		rc, rc2 := copyrc(r.Body)
 		r.Body = rc
 
