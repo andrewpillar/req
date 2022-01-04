@@ -10,15 +10,16 @@ import (
 	"strings"
 )
 
+// CommandFunc is the function for handling the invocation of a command.
 type CommandFunc func(args []Object) (Object, error)
 
 type Command struct {
-	Name string
-	Argc int
-	Args []Object
-	Func CommandFunc
+	Name string      // The name of the command.
+	Argc int         // The number of arguments for the command, -1 for unlimited.
+	Func CommandFunc // The function to execute for the command.
 }
 
+// CommandError records an error and the operation and command that caused it.
 type CommandError struct {
 	Op  string
 	Cmd string
@@ -34,6 +35,9 @@ func (e CommandError) Error() string {
 	return e.Cmd + ": " + e.Err.Error()
 }
 
+// Invoke executes the command. Before execution it will ensure the number of
+// arguments given the amount the command expects, otherwise this will return
+// a CommandError.
 func (c Command) Invoke(args []Object) (Object, error) {
 	if c.Argc > -1 {
 		if l := len(args); l != c.Argc {
@@ -56,6 +60,9 @@ func (e TypeError) Error() string {
 	return "cannot use " + e.typ.String() + " as type " + e.expected.String()
 }
 
+// EnvCmd is for the "env" command that allows for retrieving environment
+// variables. This takes a single argument that is the name of the variable.
+// This returns a string for the environment variable.
 var EnvCmd = &Command{
 	Name: "env",
 	Argc: 1,
@@ -79,6 +86,8 @@ func env(args []Object) (Object, error) {
 	}, nil
 }
 
+// ExitCmd is for the "exit" command that allows for exiting a script. This
+// takes a single argument which is the exit code to use.
 var ExitCmd = &Command{
 	Name: "exit",
 	Argc: 1,
@@ -101,6 +110,9 @@ func exit(args []Object) (Object, error) {
 	return nil, nil
 }
 
+// OpenCmd is for the "open" command that allows for opening a file. This takes
+// a single argument which is the path of the file to open. This returns a
+// handle to that file.
 var OpenCmd = &Command{
 	Name: "open",
 	Argc: 1,
@@ -133,6 +145,9 @@ func open(args []Object) (Object, error) {
 	}, nil
 }
 
+// PrintCmd is for the "print" command that allows for printing to a file or
+// to stdout. This takes an unlimited number of arguments. If the final argument
+// is a file, then the output is written to that file. This returns nothing.
 var PrintCmd = &Command{
 	Name: "print",
 	Argc: -1,
@@ -417,6 +432,8 @@ func send(args []Object) (Object, error) {
 	}, nil
 }
 
+// SniffCmd is for the "sniff" command that allows for inspecting the mime type
+// of a file or a stream. This takes a single argument, and returns a string.
 var SniffCmd = &Command{
 	Name: "sniff",
 	Argc: 1,

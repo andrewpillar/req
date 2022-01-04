@@ -1,3 +1,4 @@
+// Package eval handles the evaluation of a req script.
 package eval
 
 import (
@@ -10,10 +11,12 @@ import (
 	"github.com/andrewpillar/req/token"
 )
 
+// Context stores the variables that have been set during a script's evaluation.
 type Context struct {
 	symtab map[string]Object
 }
 
+// Put puts the given object into the current context under the given name.
 func (c *Context) Put(name string, obj Object) {
 	if c.symtab == nil {
 		c.symtab = make(map[string]Object)
@@ -27,6 +30,8 @@ type errUndefined struct {
 
 func (e errUndefined) Error() string { return "undefined: $" + e.name }
 
+// Get returns an object of the given name. If no object exists, then this
+// errors.
 func (c *Context) Get(name string) (Object, error) {
 	if c.symtab == nil {
 		return nil, errUndefined{name: name}
@@ -40,6 +45,7 @@ func (c *Context) Get(name string) (Object, error) {
 	return obj, nil
 }
 
+// Copy returns a copy of the current context.
 func (c *Context) Copy() *Context {
 	c2 := &Context{
 		symtab: make(map[string]Object),
@@ -51,20 +57,26 @@ func (c *Context) Copy() *Context {
 	return c2
 }
 
+// Error records an error that occurred during evaluation and the position at
+// which the error occurred and the original error itself.
 type Error struct {
 	Pos token.Pos
 	Err error
 }
 
 func (e Error) Unwrap() error { return e.Err }
-
 func (e Error) Error() string { return e.Pos.String() + " - " + e.Err.Error() }
 
 type Evaluator struct {
-	cmds       map[string]*Command
+	cmds map[string]*Command
+
+	// slice of cleanup functions to call to cleanup any resources opened
+	// during evaluation such as file handles. These are not called if the
+	// "exit" command is called however.
 	finalizers []func()error
 }
 
+// AddCmd adds the given command to the evaluator.
 func (e *Evaluator) AddCmd(cmd *Command) {
 	if e.cmds == nil {
 		e.cmds = make(map[string]*Command)
@@ -72,6 +84,8 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 	e.cmds[cmd.Name] = cmd
 }
 
+// interpolate parses the given string for {$Ref}, {$Ref.Dot}, and {$Ref[Ind]}
+// expressions and interpolates any that are found using the given context.
 func (e *Evaluator) interpolate(c *Context, s string) (Object, error) {
 	var buf bytes.Buffer
 
@@ -113,6 +127,8 @@ func (e *Evaluator) interpolate(c *Context, s string) (Object, error) {
 	return stringObj{value: buf.String()}, nil
 }
 
+// resolveCommand resolves the given command node into a command and its
+// arguments that can be used for command invocation.
 func (e *Evaluator) resolveCommand(c *Context, n *syntax.CommandStmt) (*Command, []Object, error) {
 	cmd, ok := e.cmds[n.Name.Value]
 
@@ -133,6 +149,8 @@ func (e *Evaluator) resolveCommand(c *Context, n *syntax.CommandStmt) (*Command,
 	return cmd, args, nil
 }
 
+// resolveArrayIndex returns the object in the given array at the given index
+// if any. If there is no object, then nil is returned.
 func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
 	i64, ok := ind.(intObj)
 
@@ -154,6 +172,8 @@ func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
 	return arrobj.items[i], nil
 }
 
+// resolveHashKey returns the object in the given hash under the given key if
+// any. If there is no object, then nil is returned.
 func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 	s, ok := key.(stringObj)
 
@@ -172,6 +192,8 @@ func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 	return obj, nil
 }
 
+// resolveDot resolves the given dot expression with the given context and
+// returns the object that is being referred to via the expression if any.
 func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (Object, error) {
 	left, err := e.Eval(c, n.Left)
 
@@ -211,6 +233,8 @@ func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (Object, error) {
 	return obj, nil
 }
 
+// resolveInd resolves the given index expression with the given context and
+// returns the object that is being referred to via the expression if any.
 func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
 	left, err := e.Eval(c, n.Left)
 
@@ -234,6 +258,9 @@ func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
 	}
 }
 
+// err records the given error at the given position. If the given error is of
+// type Error then no record is made, this is to prevent superfluous recording
+// of position information.
 func (e *Evaluator) err(pos token.Pos, err error) error {
 	if _, ok := err.(Error); ok {
 		return err
@@ -245,6 +272,8 @@ func (e *Evaluator) err(pos token.Pos, err error) error {
 	}
 }
 
+// Eval evaluates the given node with the given context and returns the object
+// the node evaluates to, if any.
 func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
@@ -351,6 +380,8 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		}
 		return hashObj{pairs: pairs}, nil
 	case *syntax.BlockStmt:
+		// Make a copy of the current context so we can correctly shadow any
+		// variables declared outside of the block.
 		c2 := c.Copy()
 
 		for _, n := range v.Nodes {
@@ -440,6 +471,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 	return nil, nil
 }
 
+// Run evaluates all of the given nodes.
 func (e *Evaluator) Run(nn []syntax.Node) error {
 	var c Context
 
