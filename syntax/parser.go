@@ -143,6 +143,10 @@ func (p *parser) ref() *Ref {
 
 	p.got(token.Ref)
 
+	if p.tok != token.Name {
+		p.expected(token.Name)
+	}
+
 	ref := &Ref{
 		node: p.node(),
 		Left: p.name(),
@@ -429,7 +433,7 @@ func (p *parser) command(name *Name) *CommandStmt {
 
 func (p *parser) vardecl(name *Name) *VarDecl {
 	n := &VarDecl{
-		node: p.node(),
+		node: name.node,
 		Name: name,
 	}
 
@@ -462,8 +466,6 @@ func (p *parser) stmt(inBlock bool) Node {
 		}
 	case token.Match:
 		n = p.matchstmt()
-	case token.Ref:
-		n = p.ref()
 	default:
 		p.unexpected(p.tok)
 		p.advance(token.Semi)
