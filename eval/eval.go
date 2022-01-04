@@ -56,7 +56,7 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 	e.cmds[cmd.Name] = cmd
 }
 
-func (e *Evaluator) interpolate(pos token.Pos, s string) (Object, error) {
+func (e *Evaluator) interpolate(s string) (Object, error) {
 	var buf bytes.Buffer
 
 	interpolate := false
@@ -74,8 +74,6 @@ func (e *Evaluator) interpolate(pos token.Pos, s string) (Object, error) {
 			n, err := syntax.ParseRef(string(expr))
 
 			if err != nil {
-				err = errors.Unwrap(err)
-
 				return nil, err
 			}
 
@@ -239,29 +237,70 @@ func (e *Evaluator) Eval(n syntax.Node) (Object, error) {
 		obj, err := e.Eval(v.Value)
 
 		if err != nil {
-			return nil, err
+			return nil, e.err(v.Value.Pos(), err)
+		}
+
+		if obj == nil {
+			return nil, e.err(v.Value.Pos(), errors.New("does not evaluate to value"))
 		}
 		e.symtab.put(name, obj)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
 		case *syntax.Name:
 			name := nameObj{value: v.Value}
-			return e.symtab.get(name)
+
+			obj, err := e.symtab.get(name)
+
+			if err != nil {
+				return nil, e.err(v.Pos(), err)
+			}
+			return obj, nil
 		case *syntax.DotExpr:
-			return e.resolveDot(v)
+			obj, err := e.resolveDot(v)
+
+			if err != nil {
+				return nil, e.err(v.Pos(), err)
+			}
+			return obj, nil
 		case *syntax.IndExpr:
-			return e.resolveInd(v)
+			obj, err := e.resolveInd(v)
+
+			if err != nil {
+				return nil, e.err(v.Pos(), err)
+			}
+			return obj, nil
 		default:
 			return nil, errors.New("invalid reference")
 		}
 	case *syntax.DotExpr:
-		return e.resolveDot(v)
+		obj, err := e.resolveDot(v)
+
+		if err != nil {
+			return nil, e.err(v.Pos(), err)
+		}
+		return obj, nil
 	case *syntax.IndExpr:
-		return e.resolveInd(v)
+		obj, err := e.resolveInd(v)
+
+		if err != nil {
+			return nil, e.err(v.Pos(), err)
+		}
+		return obj, nil
 	case *syntax.Lit:
 		switch v.Type {
 		case token.String:
-			return e.interpolate(v.Pos(), v.Value)
+			obj, err := e.interpolate(v.Value)
+
+			if err != nil {
+				// Offset original position of string so we report the position
+				// in the evaluated expression.
+				evalerr := err.(Error)
+				pos := v.Pos()
+				pos.Col += evalerr.Pos.Col + 1
+
+				return nil, e.err(pos, evalerr.Err)
+			}
+			return obj, err
 		case token.Int:
 			i, _ := strconv.ParseInt(v.Value, 10, 64)
 			return intObj{value: i}, nil

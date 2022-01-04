@@ -15,38 +15,21 @@ type parser struct {
 	errc int
 }
 
-type ParseError struct {
-	Pos token.Pos
-	Err error
-}
-
-func (e ParseError) Unwrap() error { return e.Err }
-
-func (e ParseError) Error() string {
-	return e.Pos.String() + " - " + e.Err.Error()
-}
-
 // ParseRef is a convenience function for parsing a single $Ref, $Ref.Dot,
 // or $Ref[Ind] expression. This is used as part of string interpolation. If
 // multiple errors occur during parsing, then the first of these errors is
 // returned.
 func ParseRef(s string) (Node, error) {
-	errs := make([]ParseError, 0)
+	errs := make([]error, 0)
 
 	p := parser{
 		scanner: newScanner(newSource("", strings.NewReader(s), func(pos token.Pos, msg string) {
-			errs = append(errs, ParseError{
-				Pos: pos,
-				Err: errors.New(msg),
-			})
+			errs = append(errs, errors.New(msg))
 		})),
 	}
 
 	if p.tok != token.Ref {
-		return nil, ParseError{
-			Pos: p.pos,
-			Err: errors.New("expected $"),
-		}
+		return nil, errors.New("expected $")
 	}
 
 	n := p.ref()
