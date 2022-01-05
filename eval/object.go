@@ -26,7 +26,6 @@ const (
 	Stream                   // stream
 	Name                     // name
 	Key                      // key
-	Yield                    // yield
 )
 
 type Selector interface {
@@ -284,11 +283,3 @@ func (n nameObj) String() string {
 }
 
 func (n nameObj) Type() Type { return Name }
-
-type yieldObj struct {
-	value Object
-}
-
-func (y yieldObj) String() string { return "" }
-
-func (y yieldObj) Type() Type { return Yield }
