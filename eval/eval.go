@@ -242,19 +242,36 @@ func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
 		return nil, err
 	}
 
+	var obj Object
+
+	switch v := left.(type) {
+	case nameObj:
+		obj, err = c.Get(v.value)
+
+		if err != nil {
+			return nil, err
+		}
+	case arrayObj:
+		obj = v
+	case hashObj:
+		obj = v
+	default:
+		return nil, errors.New("type " + left.Type().String() + " does not support indexing")
+	}
+
 	right, err := e.Eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
 	}
 
-	switch left.Type() {
+	switch obj.Type() {
 	case Array:
-		return e.resolveArrayIndex(left, right)
+		return e.resolveArrayIndex(obj, right)
 	case Hash:
-		return e.resolveHashKey(left, right)
+		return e.resolveHashKey(obj, right)
 	default:
-		return nil, errors.New("type " + left.Type().String() + " does not support indexing")
+		return nil, errors.New("type " + obj.Type().String() + " does not support indexing")
 	}
 }
 
