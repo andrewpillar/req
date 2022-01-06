@@ -1,0 +1,9 @@
+
+
+StatusCode = 200;
+
+match $StatusCode {
+	200 -> {
+		print "200 OK";
+	}
+}

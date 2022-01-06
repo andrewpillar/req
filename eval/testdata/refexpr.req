@@ -1,0 +1,36 @@
+
+
+String = "string";
+
+print "String =" $String;
+
+Number = 10;
+
+print "Number =" $Number;
+
+Bool = true;
+
+print "Bool =" $Bool;
+
+Array = [1, 2, 3, 4];
+
+print "Array[0] =" $Array[0];
+print "Array[2] =" $Array[2];
+print "Array[3] =" $Array[3];
+
+Hash = {
+	String: "string",
+	Array: [1, 2, 3, 4],
+	Child: {
+		Number: 10,
+		Array: ["one", "two", "three"],
+	},
+};
+
+print "Hash[\"String\"] =" $Hash["String"];
+print "Hash[\"Array\"] =" $Hash["Array"];
+print "Hash[\"Array\"][0] =" $Hash["Array"][0];
+print "Hash[\"Array\"][2] =" $Hash["Array"][2];
+print "Hash[\"Array\"][3] =" $Hash["Array"][3];
+print "Hash[\"Child\"][\"Number\"] =" $Hash["Child"]["Number"];
+print "Hash[\"Child\"][\"Array\"][1] =" $Hash["Child"]["Array"][1];

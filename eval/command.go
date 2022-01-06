@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -128,6 +129,13 @@ func open(args []Object) (Object, error) {
 		return nil, TypeError{
 			typ:      val.Type(),
 			expected: String,
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(str.value), os.FileMode(0755)); err != nil {
+		return nil, CommandError{
+			Cmd: "open",
+			Err: err,
 		}
 	}
 

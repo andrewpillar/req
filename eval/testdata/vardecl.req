@@ -1,0 +1,18 @@
+
+
+String = "string";
+
+Number = 10;
+
+Bool = true;
+
+Array = [1, 2, 3, 4];
+
+Hash = {
+	String: "string",
+	Array: [1, 2, 3, 4],
+	Child: {
+		Number: 10,
+		Array: ["one", "two", "three"],
+	},
+};
