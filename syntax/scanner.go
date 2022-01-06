@@ -45,6 +45,11 @@ func (sc *scanner) ident() {
 
 	sc.tok = token.Lookup(lit)
 	sc.lit = lit
+
+	if sc.lit == "true" || sc.lit == "false" {
+		sc.tok = token.Literal
+		sc.typ = token.Bool
+	}
 }
 
 func (sc *scanner) number() {
