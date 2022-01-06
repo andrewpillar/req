@@ -395,6 +395,18 @@ func Test_ParseRef(t *testing.T) {
 				},
 			},
 		},
+		{
+			`$Hash["Array"][0]`,
+			&Ref{
+				Left: &IndExpr{
+					Left: &IndExpr{
+						Left:  &Name{Value: "Hash"},
+						Right: &Lit{Type: token.String, Value: "Array"},
+					},
+					Right: &Lit{Type: token.Int, Value: "0"},
+				},
+			},
+		},
 	}
 
 	for i, test := range tests {
