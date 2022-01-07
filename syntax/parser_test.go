@@ -3,8 +3,6 @@ package syntax
 import (
 	"path/filepath"
 	"testing"
-
-	"github.com/andrewpillar/req/token"
 )
 
 func checkVarDecl(t *testing.T, expected, actual *VarDecl) {
@@ -204,6 +202,29 @@ func checkYieldStmt(t *testing.T, expected, actual *YieldStmt) {
 	}
 }
 
+func checkOperation(t *testing.T, expected, actual *Operation) {
+	if expected.Op != actual.Op {
+		t.Errorf("%s - unexpected Operation.Op, expected=%q, got=%q\n", actual.Pos(), expected.Op, actual.Op)
+		return
+	}
+
+	if expected.Left != nil {
+		if actual.Left == nil {
+			t.Errorf("%s - expected Left of Operation\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Left, actual.Left)
+	}
+
+	if expected.Right != nil {
+		if actual.Right == nil {
+			t.Errorf("%s - expected Right of Operation\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Right, actual.Right)
+	}
+}
+
 func checkIfStmt(t *testing.T, expected, actual *IfStmt) {
 	if expected.Cond != nil {
 		if actual.Cond == nil {
@@ -344,6 +365,14 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkYieldStmt(t, v, yield)
+	case *Operation:
+		op, ok := actual.(*Operation)
+
+		if !ok {
+			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
+			return
+		}
+		checkOperation(t, v, op)
 	case *IfStmt:
 		if_, ok := actual.(*IfStmt)
 
@@ -379,7 +408,7 @@ func Test_ParseRef(t *testing.T) {
 						Left:  &Name{Value: "Resp"},
 						Right: &Name{Value: "Header"},
 					},
-					Right: &Lit{Type: token.String, Value: "Content-Type"},
+					Right: &Lit{Type: StringLit, Value: "Content-Type"},
 				},
 			},
 		},
@@ -401,9 +430,9 @@ func Test_ParseRef(t *testing.T) {
 				Left: &IndExpr{
 					Left: &IndExpr{
 						Left:  &Name{Value: "Hash"},
-						Right: &Lit{Type: token.String, Value: "Array"},
+						Right: &Lit{Type: StringLit, Value: "Array"},
 					},
-					Right: &Lit{Type: token.Int, Value: "0"},
+					Right: &Lit{Type: IntLit, Value: "0"},
 				},
 			},
 		},
@@ -442,7 +471,7 @@ func Test_Parser(t *testing.T) {
 				Name: &Name{Value: "open"},
 				Args: []Node{
 					&Lit{
-						Type:  token.String,
+						Type:  StringLit,
 						Value: "/dev/stdout",
 					},
 				},
@@ -454,7 +483,7 @@ func Test_Parser(t *testing.T) {
 				Name: &Name{Value: "open"},
 				Args: []Node{
 					&Lit{
-						Type:  token.String,
+						Type:  StringLit,
 						Value: "/dev/stderr",
 					},
 				},
@@ -463,7 +492,7 @@ func Test_Parser(t *testing.T) {
 		&VarDecl{
 			Name: &Name{Value: "Endpoint"},
 			Value: &Lit{
-				Type:  token.String,
+				Type:  StringLit,
 				Value: "https://api.github.com",
 			},
 		},
@@ -473,10 +502,19 @@ func Test_Parser(t *testing.T) {
 				Name: &Name{Value: "env"},
 				Args: []Node{
 					&Lit{
-						Type:  token.String,
+						Type:  StringLit,
 						Value: "GH_TOKEN",
 					},
 				},
+			},
+		},
+		&IfStmt{
+			Cond: &Operation{
+				Op:   EqOp,
+				Left: &Ref{
+					Left: &Name{Value: "Token"},
+				},
+				Right: &Lit{Type: StringLit},
 			},
 		},
 		&VarDecl{
@@ -487,7 +525,7 @@ func Test_Parser(t *testing.T) {
 						Name: &Name{Value: "GET"},
 						Args: []Node{
 							&Lit{
-								Type:  token.String,
+								Type:  StringLit,
 								Value: "{$Endpoint}/user",
 							},
 							&Object{
@@ -495,14 +533,14 @@ func Test_Parser(t *testing.T) {
 									{
 										Key: &Name{Value: "Authorization"},
 										Value: &Lit{
-											Type:  token.String,
+											Type:  StringLit,
 											Value: "Bearer {$Token}",
 										},
 									},
 									{
 										Key: &Name{Value: "Content-Type"},
 										Value: &Lit{
-											Type:  token.String,
+											Type:  StringLit,
 											Value: "application/json; charset=utf-8",
 										},
 									},
@@ -526,7 +564,7 @@ func Test_Parser(t *testing.T) {
 			Cases: []*CaseStmt{
 				{
 					Value: &Lit{
-						Type:  token.Int,
+						Type:  IntLit,
 						Value: "200",
 					},
 					Then: &CommandStmt{

@@ -6,6 +6,11 @@ Stderr = open "/dev/stderr";
 Endpoint = "https://api.github.com";
 Token = env "GH_TOKEN";
 
+if $Token == "" {
+	print "GH_TOKEN not set" $Stderr;
+	exit 1;
+}
+
 Resp = GET "{$Endpoint}/user" {
 	Authorization: "Bearer {$Token}",
 	Content-Type: "application/json; charset=utf-8",

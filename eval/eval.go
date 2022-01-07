@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/andrewpillar/req/syntax"
-	"github.com/andrewpillar/req/token"
 )
 
 // Context stores the variables that have been set during a script's evaluation.
@@ -60,7 +59,7 @@ func (c *Context) Copy() *Context {
 // Error records an error that occurred during evaluation and the position at
 // which the error occurred and the original error itself.
 type Error struct {
-	Pos token.Pos
+	Pos syntax.Pos
 	Err error
 }
 
@@ -278,7 +277,7 @@ func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
 // err records the given error at the given position. If the given error is of
 // type Error then no record is made, this is to prevent superfluous recording
 // of position information.
-func (e *Evaluator) err(pos token.Pos, err error) error {
+func (e *Evaluator) err(pos syntax.Pos, err error) error {
 	if _, ok := err.(Error); ok {
 		return err
 	}
@@ -346,7 +345,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		return obj, nil
 	case *syntax.Lit:
 		switch v.Type {
-		case token.String:
+		case syntax.StringLit:
 			obj, err := e.interpolate(c, v.Value)
 
 			if err != nil {
@@ -359,10 +358,10 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 				return nil, e.err(pos, evalerr.Err)
 			}
 			return obj, err
-		case token.Int:
+		case syntax.IntLit:
 			i, _ := strconv.ParseInt(v.Value, 10, 64)
 			return intObj{value: i}, nil
-		case token.Bool:
+		case syntax.BoolLit:
 			b := true
 
 			if v.Value != "true" {

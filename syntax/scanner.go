@@ -1,17 +1,14 @@
 package syntax
 
-import (
-	"fmt"
-
-	"github.com/andrewpillar/req/token"
-)
+import "fmt"
 
 type scanner struct {
 	*source
 
-	pos token.Pos
-	tok token.Token
-	typ token.Type
+	pos Pos
+	op  Op
+	tok token
+	typ LitType
 	lit string
 }
 
@@ -43,13 +40,8 @@ func (sc *scanner) ident() {
 
 	lit := sc.stopLit()
 
-	sc.tok = token.Lookup(lit)
+	sc.tok = lookupTok(lit)
 	sc.lit = lit
-
-	if sc.lit == "true" || sc.lit == "false" {
-		sc.tok = token.Literal
-		sc.typ = token.Bool
-	}
 }
 
 func (sc *scanner) number() {
@@ -62,8 +54,8 @@ func (sc *scanner) number() {
 	}
 	sc.unget()
 
-	sc.tok = token.Literal
-	sc.typ = token.Int
+	sc.tok = _Literal
+	sc.typ = IntLit
 	sc.lit = sc.stopLit()
 }
 
@@ -102,15 +94,17 @@ func (sc *scanner) string() {
 
 	lit := sc.stopLit()
 
-	sc.tok = token.Literal
-	sc.typ = token.String
+	sc.tok = _Literal
+	sc.typ = StringLit
 	sc.lit = lit[1 : len(lit)-1]
 }
 
 func (sc *scanner) next() {
 redo:
+	sc.op = Op(0)
+	sc.tok = token(0)
 	sc.lit = sc.lit[0:0]
-	sc.typ = token.Type(0)
+	sc.typ = LitType(0)
 
 	r := sc.get()
 
@@ -129,6 +123,11 @@ redo:
 
 	if isLetter(r) {
 		sc.ident()
+
+		if ok := isop(sc.lit); ok {
+			sc.tok = _Op
+			sc.lit = ""
+		}
 		return
 	}
 
@@ -139,37 +138,66 @@ redo:
 
 	switch r {
 	case -1:
-		sc.tok = token.EOF
+		sc.tok = _EOF
 	case ';', '\n':
-		sc.tok = token.Semi
+		sc.tok = _Semi
 	case ',':
-		sc.tok = token.Comma
+		sc.tok = _Comma
 	case ':':
-		sc.tok = token.Colon
+		sc.tok = _Colon
 	case '.':
 		if sc.get() == '.' {
-			sc.tok = token.DotDot
+			sc.tok = _DotDot
 			break
 		}
 		sc.unget()
-		sc.tok = token.Dot
+		sc.tok = _Dot
 	case '{':
-		sc.tok = token.Lbrace
+		sc.tok = _Lbrace
 	case '}':
-		sc.tok = token.Rbrace
+		sc.tok = _Rbrace
 	case '[':
-		sc.tok = token.Lbrack
+		sc.tok = _Lbrack
 	case ']':
-		sc.tok = token.Rbrack
+		sc.tok = _Rbrack
 	case '=':
-		sc.tok = token.Assign
+		if sc.get() == '=' {
+			sc.tok = _Op
+			sc.op = EqOp
+			break
+		}
+		sc.unget()
+		sc.tok = _Assign
+	case '!':
+		if sc.get() == '=' {
+			sc.tok = _Op
+			sc.op = NeqOp
+			break
+		}
+		sc.unget()
+	case '<':
+		if sc.get() == '=' {
+			sc.tok = _Op
+			sc.op = LeqOp
+			break
+		}
+		sc.unget()
+		sc.op = LtOp
+	case '>':
+		if sc.get() == '=' {
+			sc.tok = _Op
+			sc.op = GeqOp
+			break
+		}
+		sc.unget()
+		sc.op = GtOp
 	case '$':
-		sc.tok = token.Ref
+		sc.tok = _Ref
 	case '"':
 		sc.string()
 	case '-':
 		if sc.get() == '>' {
-			sc.tok = token.Arrow
+			sc.tok = _Arrow
 			break
 		}
 		sc.unget()

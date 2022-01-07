@@ -5,11 +5,10 @@ import (
 	"testing"
 
 	"github.com/andrewpillar/req/syntax"
-	"github.com/andrewpillar/req/token"
 )
 
-func errh(t *testing.T) func(token.Pos, string) {
-	return func(pos token.Pos, msg string) {
+func errh(t *testing.T) func(syntax.Pos, string) {
+	return func(pos syntax.Pos, msg string) {
 		t.Errorf("%s - %s\n", pos, msg)
 	}
 }

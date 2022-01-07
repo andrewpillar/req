@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/andrewpillar/req/token"
 )
 
 type parser struct {
@@ -23,12 +21,12 @@ func ParseRef(s string) (Node, error) {
 	errs := make([]error, 0)
 
 	p := parser{
-		scanner: newScanner(newSource("", strings.NewReader(s), func(pos token.Pos, msg string) {
+		scanner: newScanner(newSource("", strings.NewReader(s), func(pos Pos, msg string) {
 			errs = append(errs, errors.New(msg))
 		})),
 	}
 
-	if p.tok != token.Ref {
+	if p.tok != _Ref {
 		return nil, errors.New("expected $")
 	}
 
@@ -40,7 +38,7 @@ func ParseRef(s string) (Node, error) {
 	return n, nil
 }
 
-func ParseFile(fname string, errh func(token.Pos, string)) ([]Node, error) {
+func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
 	f, err := os.Open(fname)
 
 	if err != nil {
@@ -55,13 +53,13 @@ func ParseFile(fname string, errh func(token.Pos, string)) ([]Node, error) {
 	return p.parse()
 }
 
-func (p *parser) advance(follow ...token.Token) {
-	set := make(map[token.Token]struct{})
+func (p *parser) advance(follow ...token) {
+	set := make(map[token]struct{})
 
 	for _, tok := range follow {
 		set[tok] = struct{}{}
 	}
-	set[token.EOF] = struct{}{}
+	set[_EOF] = struct{}{}
 
 	for {
 		if _, ok := set[p.tok]; ok {
@@ -71,7 +69,7 @@ func (p *parser) advance(follow ...token.Token) {
 	}
 }
 
-func (p *parser) got(tok token.Token) bool {
+func (p *parser) got(tok token) bool {
 	if p.tok == tok {
 		p.next()
 		return true
@@ -79,7 +77,7 @@ func (p *parser) got(tok token.Token) bool {
 	return false
 }
 
-func (p *parser) errAt(pos token.Pos, msg string) {
+func (p *parser) errAt(pos Pos, msg string) {
 	p.errc++
 	p.scanner.source.errh(pos, msg)
 }
@@ -88,15 +86,15 @@ func (p *parser) err(msg string) {
 	p.errAt(p.pos, msg)
 }
 
-func (p *parser) expected(tok token.Token) {
+func (p *parser) expected(tok token) {
 	p.err("expected " + tok.String())
 }
 
-func (p *parser) unexpected(tok token.Token) {
+func (p *parser) unexpected(tok token) {
 	p.err("unexpected " + tok.String())
 }
 
-func (p *parser) want(tok token.Token) {
+func (p *parser) want(tok token) {
 	if !p.got(tok) {
 		p.expected(tok)
 	}
@@ -109,7 +107,7 @@ func (p *parser) node() node {
 }
 
 func (p *parser) name() *Name {
-	if p.tok != token.Name {
+	if p.tok != _Name {
 		return nil
 	}
 
@@ -123,7 +121,7 @@ func (p *parser) name() *Name {
 }
 
 func (p *parser) literal() *Lit {
-	if p.tok != token.Literal {
+	if p.tok != _Literal {
 		return nil
 	}
 
@@ -137,14 +135,14 @@ func (p *parser) literal() *Lit {
 }
 
 func (p *parser) ref() *Ref {
-	if p.tok != token.Ref {
+	if p.tok != _Ref {
 		return nil
 	}
 
-	p.got(token.Ref)
+	p.got(_Ref)
 
-	if p.tok != token.Name {
-		p.expected(token.Name)
+	if p.tok != _Name {
+		p.expected(_Name)
 	}
 
 	ref := &Ref{
@@ -157,11 +155,11 @@ loop:
 		pos := p.pos
 
 		switch p.tok {
-		case token.Dot:
+		case _Dot:
 			p.next()
 
-			if p.tok != token.Name {
-				p.expected(token.Name)
+			if p.tok != _Name {
+				p.expected(_Name)
 				p.next()
 				return nil
 			}
@@ -173,10 +171,10 @@ loop:
 				Left:  left,
 				Right: p.name(),
 			}
-		case token.Lbrack:
+		case _Lbrack:
 			p.next()
 
-			if p.tok == token.Rbrack {
+			if p.tok == _Rbrack {
 				p.err("expected string, int, or variable")
 				p.next()
 				break
@@ -189,16 +187,16 @@ loop:
 			}
 
 			switch p.tok {
-			case token.Literal:
+			case _Literal:
 				ind.Right = p.literal()
-			case token.Ref:
+			case _Ref:
 				ind.Right = p.ref()
 			default:
 				p.unexpected(p.tok)
 				p.next()
 			}
 
-			p.want(token.Rbrack)
+			p.want(_Rbrack)
 			ref.Left = ind
 		default:
 			break loop
@@ -207,8 +205,8 @@ loop:
 	return ref
 }
 
-func (p *parser) list(sep, end token.Token, parse func()) {
-	for p.tok != token.EOF && p.tok != end {
+func (p *parser) list(sep, end token, parse func()) {
+	for p.tok != _EOF && p.tok != end {
 		parse()
 
 		if !p.got(sep) && p.tok != end {
@@ -220,22 +218,22 @@ func (p *parser) list(sep, end token.Token, parse func()) {
 }
 
 func (p *parser) obj() *Object {
-	p.want(token.Lbrace)
+	p.want(_Lbrace)
 
 	n := &Object{
 		node: p.node(),
 	}
 
-	p.list(token.Comma, token.Rbrace, func() {
-		if p.tok != token.Name {
-			p.expected(token.Name)
-			p.advance(token.Rbrace, token.Semi)
+	p.list(_Comma, _Rbrace, func() {
+		if p.tok != _Name {
+			p.expected(_Name)
+			p.advance(_Rbrace, _Semi)
 			return
 		}
 
 		key := p.name()
 
-		p.want(token.Colon)
+		p.want(_Colon)
 
 		val := p.operand()
 
@@ -249,15 +247,15 @@ func (p *parser) obj() *Object {
 }
 
 func (p *parser) arr() *Array {
-	p.want(token.Lbrack)
+	p.want(_Lbrack)
 
 	n := &Array{
 		node: p.node(),
 	}
 
-	p.list(token.Comma, token.Rbrack, func() {
-		if p.tok != token.Literal {
-			p.expected(token.Literal)
+	p.list(_Comma, _Rbrack, func() {
+		if p.tok != _Literal {
+			p.expected(_Literal)
 			p.next()
 			return
 		}
@@ -267,17 +265,17 @@ func (p *parser) arr() *Array {
 }
 
 func (p *parser) blockstmt() *BlockStmt {
-	p.want(token.Lbrace)
+	p.want(_Lbrace)
 
 	n := &BlockStmt{
 		node: p.node(),
 	}
 
-	for p.tok != token.Rbrace && p.tok != token.EOF {
+	for p.tok != _Rbrace && p.tok != _EOF {
 		n.Nodes = append(n.Nodes, p.stmt(true))
 	}
 
-	p.want(token.Rbrace)
+	p.want(_Rbrace)
 	return n
 }
 
@@ -286,7 +284,7 @@ func (p *parser) casestmt() *CaseStmt {
 		node: p.node(),
 	}
 
-	if p.tok != token.Literal {
+	if p.tok != _Literal {
 		p.unexpected(p.tok)
 		p.next()
 		return nil
@@ -294,12 +292,12 @@ func (p *parser) casestmt() *CaseStmt {
 
 	n.Value = p.literal()
 
-	p.want(token.Arrow)
+	p.want(_Arrow)
 
 	switch p.tok {
-	case token.Lbrace:
+	case _Lbrace:
 		n.Then = p.blockstmt()
-	case token.Name:
+	case _Name:
 		n.Then = p.command(p.name())
 	default:
 		p.unexpected(p.tok)
@@ -309,7 +307,7 @@ func (p *parser) casestmt() *CaseStmt {
 }
 
 func (p *parser) matchstmt() *MatchStmt {
-	if p.tok != token.Match {
+	if p.tok != _Match {
 		return nil
 	}
 
@@ -320,47 +318,90 @@ func (p *parser) matchstmt() *MatchStmt {
 	p.next()
 
 	switch p.tok {
-	case token.Literal:
+	case _Literal:
 		n.Cond = p.literal()
-	case token.Ref:
+	case _Ref:
 		n.Cond = p.ref()
 	default:
 		p.unexpected(p.tok)
 		p.next()
 	}
 
-	p.want(token.Lbrace)
+	p.want(_Lbrace)
 
-	for p.tok != token.Rbrace {
-		if p.tok == token.Name {
+	for p.tok != _Rbrace {
+		if p.tok == _Name {
 			if p.lit != "_" {
-				p.unexpected(token.Name)
-				p.advance(token.Rbrace, token.Semi)
+				p.unexpected(_Name)
+				p.advance(_Rbrace, _Semi)
 				continue
 			}
 
 			p.name()
-			p.want(token.Arrow)
+			p.want(_Arrow)
 
 			switch p.tok {
-			case token.Lbrace:
+			case _Lbrace:
 				n.Default = p.blockstmt()
-			case token.Name:
+			case _Name:
 				n.Default = p.command(p.name())
 			default:
 				p.unexpected(p.tok)
 				p.next()
 			}
-			p.got(token.Semi)
+			p.got(_Semi)
 			continue
 		}
 
 		n.Cases = append(n.Cases, p.casestmt())
 
-		p.got(token.Semi)
+		p.got(_Semi)
 	}
 
-	p.got(token.Rbrace)
+	p.got(_Rbrace)
+	return n
+}
+
+func (p *parser) infixexpr() Node {
+	n := p.expr()
+
+	for p.tok == _Op {
+		o := &Operation{
+			node: node{pos: n.Pos()},
+			Op:   p.op,
+			Left: n,
+		}
+		p.next()
+		o.Right = p.infixexpr()
+
+		n = o
+	}
+	return n
+}
+
+func (p *parser) ifstmt() *IfStmt {
+	if !p.got(_If) {
+		return nil
+	}
+
+	n := &IfStmt{
+		node: p.node(),
+		Cond: p.infixexpr(),
+	}
+
+	n.Then = p.blockstmt()
+
+	if p.got(_Else) {
+		switch p.tok {
+		case _If:
+			n.Else = p.ifstmt()
+		case _Lbrace:
+			n.Else = p.blockstmt()
+		default:
+			p.err("expected if statement or {")
+			p.next()
+		}
+	}
 	return n
 }
 
@@ -369,17 +410,17 @@ func (p *parser) chain(cmd *CommandStmt) *ChainExpr {
 		Commands: []*CommandStmt{cmd},
 	}
 
-	for p.tok != token.Semi && p.tok != token.EOF {
-		if p.tok != token.Name {
-			p.expected(token.Name)
-			p.advance(token.Semi)
+	for p.tok != _Semi && p.tok != _EOF {
+		if p.tok != _Name {
+			p.expected(_Name)
+			p.advance(_Semi)
 			continue
 		}
 
 		n.Commands = append(n.Commands, p.command(p.name()))
 
-		if !p.got(token.Arrow) && p.tok != token.Semi && p.tok != token.EOF {
-			p.err("expected " + token.Arrow.String() + " or " + token.Semi.String())
+		if !p.got(_Arrow) && p.tok != _Semi && p.tok != _EOF {
+			p.err("expected " + _Arrow.String() + " or " + _Semi.String())
 			p.next()
 		}
 	}
@@ -390,27 +431,27 @@ func (p *parser) operand() Node {
 	var n Node
 
 	switch p.tok {
-	case token.Literal:
+	case _Literal:
 		n = p.literal()
-	case token.Ref:
+	case _Ref:
 		n = p.ref()
-	case token.Lbrace:
+	case _Lbrace:
 		n = p.obj()
-	case token.Lbrack:
+	case _Lbrack:
 		n = p.arr()
 	default:
 		p.unexpected(p.tok)
-		p.advance(token.Rbrace, token.Semi)
+		p.advance(_Rbrace, _Semi)
 	}
 	return n
 }
 
 func (p *parser) expr() Node {
 	switch p.tok {
-	case token.Name:
+	case _Name:
 		n := p.command(p.name())
 
-		if p.got(token.Arrow) {
+		if p.got(_Arrow) {
 			return p.chain(n)
 		}
 		return n
@@ -425,7 +466,7 @@ func (p *parser) command(name *Name) *CommandStmt {
 		Name: name,
 	}
 
-	for p.tok != token.Arrow && p.tok != token.Semi && p.tok != token.EOF {
+	for p.tok != _Arrow && p.tok != _Semi && p.tok != _EOF {
 		n.Args = append(n.Args, p.operand())
 	}
 	return n
@@ -437,7 +478,7 @@ func (p *parser) vardecl(name *Name) *VarDecl {
 		Name: name,
 	}
 
-	if !p.got(token.Assign) {
+	if !p.got(_Assign) {
 		return nil
 	}
 
@@ -450,10 +491,10 @@ func (p *parser) stmt(inBlock bool) Node {
 	var n Node
 
 	switch p.tok {
-	case token.Name:
+	case _Name:
 		name := p.name()
 
-		if p.tok == token.Assign {
+		if p.tok == _Assign {
 			n = p.vardecl(name)
 			break
 		}
@@ -461,20 +502,23 @@ func (p *parser) stmt(inBlock bool) Node {
 		cmd := p.command(name)
 		n = cmd
 
-		if p.got(token.Arrow) {
+		if p.got(_Arrow) {
 			n = p.chain(cmd)
 		}
-	case token.Match:
+	case _Match:
 		n = p.matchstmt()
+		return n
+	case _If:
+		n = p.ifstmt()
 		return n
 	default:
 		p.unexpected(p.tok)
-		p.advance(token.Semi)
+		p.advance(_Semi)
 	}
 
-	if p.tok != token.EOF {
-		if !p.got(token.Semi) {
-			p.expected(token.Semi)
+	if p.tok != _EOF {
+		if !p.got(_Semi) {
+			p.expected(_Semi)
 		}
 	}
 	return n
@@ -483,7 +527,7 @@ func (p *parser) stmt(inBlock bool) Node {
 func (p *parser) parse() ([]Node, error) {
 	nn := make([]Node, 0)
 
-	for p.tok != token.EOF {
+	for p.tok != _EOF {
 		nn = append(nn, p.stmt(false))
 	}
 

@@ -1,22 +1,18 @@
 package syntax
 
-import "github.com/andrewpillar/req/token"
-
 type Node interface {
-	Pos() token.Pos
+	Pos() Pos
 
 	Err(msg string) error
 }
 
 type node struct {
-	pos token.Pos
+	pos Pos
 }
 
-func (n node) Pos() token.Pos { return n.pos }
+func (n node) Pos() Pos { return n.pos }
 
-func (n node) Err(msg string) error {
-	return n.pos.Err(msg)
-}
+func (n node) Err(msg string) error { return n.pos.Err(msg) }
 
 type VarDecl struct {
 	node
@@ -54,7 +50,7 @@ type ChainExpr struct {
 type Lit struct {
 	node
 
-	Type  token.Type
+	Type  LitType
 	Value string
 }
 
@@ -115,6 +111,14 @@ type YieldStmt struct {
 	node
 
 	Value Node
+}
+
+type Operation struct {
+	node
+
+	Op    Op
+	Left  Node
+	Right Node
 }
 
 type IfStmt struct {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/andrewpillar/req/eval"
 	"github.com/andrewpillar/req/syntax"
-	"github.com/andrewpillar/req/token"
 )
 
 func files() ([]string, error) {
@@ -43,8 +42,8 @@ func files() ([]string, error) {
 	return fnames, nil
 }
 
-func errh(errs chan error) func(token.Pos, string) {
-	return func(pos token.Pos, msg string) {
+func errh(errs chan error) func(syntax.Pos, string) {
+	return func(pos syntax.Pos, msg string) {
 		errs <- errors.New(pos.String() + " - " + msg)
 	}
 }

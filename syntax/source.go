@@ -4,8 +4,6 @@ import (
 	"errors"
 	"io"
 	"unicode/utf8"
-
-	"github.com/andrewpillar/req/token"
 )
 
 type source struct {
@@ -15,12 +13,12 @@ type source struct {
 	eof         int
 	line0, line int
 	col0, col   int
-	errh        func(token.Pos, string)
+	errh        func(Pos, string)
 	buf         []byte
 	lit         int
 }
 
-func newSource(name string, r io.Reader, errh func(token.Pos, string)) *source {
+func newSource(name string, r io.Reader, errh func(Pos, string)) *source {
 	return &source{
 		name: name,
 		r:    r,
@@ -31,8 +29,8 @@ func newSource(name string, r io.Reader, errh func(token.Pos, string)) *source {
 	}
 }
 
-func (s *source) getpos() token.Pos {
-	return token.Pos{
+func (s *source) getpos() Pos {
+	return Pos{
 		File: s.name,
 		Line: s.line,
 		Col:  s.col,
