@@ -85,8 +85,8 @@ type LitType uint
 //go:generate stringer -type LitType -linecomment
 const (
 	StringLit LitType = iota + 1 // string
-	IntLit                    // int
-	BoolLit                   // bool
+	IntLit                       // int
+	BoolLit                      // bool
 )
 
 var keywords = map[string]token{

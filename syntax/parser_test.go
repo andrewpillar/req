@@ -510,7 +510,7 @@ func Test_Parser(t *testing.T) {
 		},
 		&IfStmt{
 			Cond: &Operation{
-				Op:   EqOp,
+				Op: EqOp,
 				Left: &Ref{
 					Left: &Name{Value: "Token"},
 				},

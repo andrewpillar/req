@@ -72,7 +72,7 @@ type Evaluator struct {
 	// slice of cleanup functions to call to cleanup any resources opened
 	// during evaluation such as file handles. These are not called if the
 	// "exit" command is called however.
-	finalizers []func()error
+	finalizers []func() error
 }
 
 // AddCmd adds the given command to the evaluator.
