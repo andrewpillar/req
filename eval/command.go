@@ -73,6 +73,13 @@ func (e TypeError) Error() string {
 }
 
 var (
+	nilCmd = &Command{
+		Name: "nil",
+		Func: func(_ []Object) (Object, error) {
+			return nilObj{}, nil
+		},
+	}
+
 	trueCmd = &Command{
 		Name: "true",
 		Func: func(_ []Object) (Object, error) {

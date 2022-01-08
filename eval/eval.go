@@ -90,9 +90,10 @@ var builtinCmds = []*Command{
 	SendCmd,
 	SniffCmd,
 
-	// pseudo-commands for bool literals
+	// pseudo-commands for consts
 	trueCmd,
 	falseCmd,
+	nilCmd,
 }
 
 func New() *Evaluator {
@@ -197,7 +198,7 @@ func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
 	i := int(i64.value)
 
 	if i < 0 || i > end {
-		return nil, nil
+		return nilObj{}, nil
 	}
 	return arrobj.items[i], nil
 }
@@ -217,7 +218,7 @@ func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 	obj, ok := hash.(hashObj).pairs[s.value]
 
 	if !ok {
-		return nil, nil
+		return nilObj{}, nil
 	}
 	return obj, nil
 }
@@ -319,7 +320,7 @@ func (e *Evaluator) err(pos syntax.Pos, err error) error {
 	}
 }
 
-// Eval evaluates the given node with the given context and returns the object
+// eval evaluates the given node with the given context and returns the object
 // the node evaluates to, if any.
 func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 	switch v := n.(type) {
