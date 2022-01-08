@@ -188,6 +188,8 @@ func (r reqObj) Select(obj Object) (Object, error) {
 	switch val {
 	case "Method":
 		return stringObj{value: r.Method}, nil
+	case "URL":
+		return stringObj(value: r.URL.String()}, nil
 	case "Header":
 		hash := hashObj{
 			pairs: make(map[string]Object),
