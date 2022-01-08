@@ -34,3 +34,8 @@ print "Hash[\"Array\"][2] =" $Hash["Array"][2];
 print "Hash[\"Array\"][3] =" $Hash["Array"][3];
 print "Hash[\"Child\"][\"Number\"] =" $Hash["Child"]["Number"];
 print "Hash[\"Child\"][\"Array\"][1] =" $Hash["Child"]["Array"][1];
+
+Resp = GET "__endpoint__" -> send;
+
+print $Resp.StatusCode;
+print $Resp.Header["Content-Type"];
