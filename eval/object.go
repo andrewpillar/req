@@ -26,6 +26,7 @@ const (
 	Stream                   // stream
 	Name                     // name
 	Key                      // key
+	Nil                      // nil
 )
 
 type Selector interface {
@@ -37,6 +38,12 @@ type Object interface {
 
 	String() string
 }
+
+type nilObj struct {}
+
+func (e nilObj) String() string { return "<nil>" }
+
+func (e nilObj) Type() Type { return Nil }
 
 type stringObj struct {
 	value string
