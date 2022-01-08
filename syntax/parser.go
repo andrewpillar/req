@@ -3,6 +3,7 @@ package syntax
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -38,6 +39,13 @@ func ParseRef(s string) (Node, error) {
 	return n, nil
 }
 
+func Parse(name string, r io.Reader, errh func(Pos, string)) ([]Node, error) {
+	p := parser{
+		scanner: newScanner(newSource(name, r, errh)),
+	}
+	return p.parse()
+}
+
 func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
 	f, err := os.Open(fname)
 
@@ -47,10 +55,7 @@ func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
 
 	defer f.Close()
 
-	p := parser{
-		scanner: newScanner(newSource(fname, f, errh)),
-	}
-	return p.parse()
+	return Parse(fname, f, errh)
 }
 
 func (p *parser) advance(follow ...token) {
