@@ -10,13 +10,13 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
-// Context stores the variables that have been set during a script's evaluation.
-type Context struct {
+// context stores the variables that have been set during a script's evaluation.
+type context struct {
 	symtab map[string]Object
 }
 
 // Put puts the given object into the current context under the given name.
-func (c *Context) Put(name string, obj Object) {
+func (c *context) Put(name string, obj Object) {
 	if c.symtab == nil {
 		c.symtab = make(map[string]Object)
 	}
@@ -31,7 +31,7 @@ func (e errUndefined) Error() string { return "undefined: $" + e.name }
 
 // Get returns an object of the given name. If no object exists, then this
 // errors.
-func (c *Context) Get(name string) (Object, error) {
+func (c *context) Get(name string) (Object, error) {
 	if c.symtab == nil {
 		return nil, errUndefined{name: name}
 	}
@@ -45,8 +45,8 @@ func (c *Context) Get(name string) (Object, error) {
 }
 
 // Copy returns a copy of the current context.
-func (c *Context) Copy() *Context {
-	c2 := &Context{
+func (c *context) Copy() *context {
+	c2 := &context{
 		symtab: make(map[string]Object),
 	}
 
@@ -116,7 +116,7 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 
 // interpolate parses the given string for {$Ref}, {$Ref.Dot}, and {$Ref[Ind]}
 // expressions and interpolates any that are found using the given context.
-func (e *Evaluator) interpolate(c *Context, s string) (Object, error) {
+func (e *Evaluator) interpolate(c *context, s string) (Object, error) {
 	var buf bytes.Buffer
 
 	interpolate := false
@@ -137,7 +137,7 @@ func (e *Evaluator) interpolate(c *Context, s string) (Object, error) {
 				return nil, err
 			}
 
-			obj, err := e.Eval(c, n)
+			obj, err := e.eval(c, n)
 
 			if err != nil {
 				return nil, err
@@ -159,7 +159,7 @@ func (e *Evaluator) interpolate(c *Context, s string) (Object, error) {
 
 // resolveCommand resolves the given command node into a command and its
 // arguments that can be used for command invocation.
-func (e *Evaluator) resolveCommand(c *Context, n *syntax.CommandStmt) (*Command, []Object, error) {
+func (e *Evaluator) resolveCommand(c *context, n *syntax.CommandStmt) (*Command, []Object, error) {
 	cmd, ok := e.cmds[n.Name.Value]
 
 	if !ok {
@@ -169,7 +169,7 @@ func (e *Evaluator) resolveCommand(c *Context, n *syntax.CommandStmt) (*Command,
 	args := make([]Object, 0, len(n.Args))
 
 	for _, arg := range n.Args {
-		obj, err := e.Eval(c, arg)
+		obj, err := e.eval(c, arg)
 
 		if err != nil {
 			return nil, nil, e.err(arg.Pos(), err)
@@ -224,8 +224,8 @@ func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 
 // resolveDot resolves the given dot expression with the given context and
 // returns the object that is being referred to via the expression if any.
-func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (Object, error) {
-	left, err := e.Eval(c, n.Left)
+func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (Object, error) {
+	left, err := e.eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (Object, error) {
 		return nil, errors.New("cannot use type " + obj.Type().String() + " as selector")
 	}
 
-	right, err := e.Eval(c, n.Right)
+	right, err := e.eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
@@ -265,8 +265,8 @@ func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (Object, error) {
 
 // resolveInd resolves the given index expression with the given context and
 // returns the object that is being referred to via the expression if any.
-func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
-	left, err := e.Eval(c, n.Left)
+func (e *Evaluator) resolveInd(c *context, n *syntax.IndExpr) (Object, error) {
+	left, err := e.eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
@@ -289,7 +289,7 @@ func (e *Evaluator) resolveInd(c *Context, n *syntax.IndExpr) (Object, error) {
 		return nil, errors.New("type " + left.Type().String() + " does not support indexing")
 	}
 
-	right, err := e.Eval(c, n.Right)
+	right, err := e.eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
@@ -321,10 +321,10 @@ func (e *Evaluator) err(pos syntax.Pos, err error) error {
 
 // Eval evaluates the given node with the given context and returns the object
 // the node evaluates to, if any.
-func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
+func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
-		obj, err := e.Eval(c, v.Value)
+		obj, err := e.eval(c, v.Value)
 
 		if err != nil {
 			return nil, e.err(v.Value.Pos(), err)
@@ -406,7 +406,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		items := make([]Object, 0, len(v.Items))
 
 		for _, it := range v.Items {
-			obj, err := e.Eval(c, it)
+			obj, err := e.eval(c, it)
 
 			if err != nil {
 				return nil, err
@@ -418,7 +418,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		pairs := make(map[string]Object)
 
 		for _, n := range v.Pairs {
-			obj, err := e.Eval(c, n.Value)
+			obj, err := e.eval(c, n.Value)
 
 			if err != nil {
 				return nil, err
@@ -432,7 +432,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		c2 := c.Copy()
 
 		for _, n := range v.Nodes {
-			if _, err := e.Eval(c2, n); err != nil {
+			if _, err := e.eval(c2, n); err != nil {
 				return nil, err
 			}
 		}
@@ -444,7 +444,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 			return nil, e.err(n.Pos(), err)
 		}
 
-		obj, err := cmd.Invoke(args)
+		obj, err := cmd.invoke(args)
 
 		if err != nil {
 			return nil, err
@@ -455,7 +455,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		}
 		return obj, nil
 	case *syntax.MatchStmt:
-		obj, err := e.Eval(c, v.Cond)
+		obj, err := e.eval(c, v.Cond)
 
 		if err != nil {
 			return nil, err
@@ -466,7 +466,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		for _, stmt := range v.Cases {
 			h := fnv.New32a()
 
-			obj, err := e.Eval(c, stmt.Value)
+			obj, err := e.eval(c, stmt.Value)
 
 			if err != nil {
 				return nil, err
@@ -485,11 +485,11 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 		h.Write([]byte(obj.String()))
 
 		if n, ok := jmptab[h.Sum32()]; ok {
-			return e.Eval(c, n)
+			return e.eval(c, n)
 		}
 
 		if v.Default != nil {
-			return e.Eval(c, v.Default)
+			return e.eval(c, v.Default)
 		}
 		return nil, nil
 	case *syntax.ChainExpr:
@@ -506,7 +506,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 				args = append([]Object{obj}, args...)
 			}
 
-			obj, err = cmd.Invoke(args)
+			obj, err = cmd.invoke(args)
 
 			if err != nil {
 				return nil, err
@@ -520,10 +520,10 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (Object, error) {
 
 // Run evaluates all of the given nodes.
 func (e *Evaluator) Run(nn []syntax.Node) error {
-	var c Context
+	var c context
 
 	for _, n := range nn {
-		if _, err := e.Eval(&c, n); err != nil {
+		if _, err := e.eval(&c, n); err != nil {
 			return err
 		}
 	}

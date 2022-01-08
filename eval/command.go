@@ -39,10 +39,10 @@ func (e CommandError) Error() string {
 	return e.Cmd + ": " + e.Err.Error()
 }
 
-// Invoke executes the command. Before execution it will ensure the number of
+// invoke executes the command. Before execution it will ensure the number of
 // arguments given the amount the command expects, otherwise this will return
 // a CommandError.
-func (c Command) Invoke(args []Object) (Object, error) {
+func (c Command) invoke(args []Object) (Object, error) {
 	if c.Argc > -1 {
 		if l := len(args); l != c.Argc {
 			if l > c.Argc {
@@ -72,19 +72,21 @@ func (e TypeError) Error() string {
 	return "cannot use " + e.typ.String() + " as type " + e.expected.String()
 }
 
-var trueCmd = &Command{
-	Name: "true",
-	Func: func(_ []Object) (Object, error) {
-		return boolObj{value: true}, nil
-	},
-}
+var (
+	trueCmd = &Command{
+		Name: "true",
+		Func: func(_ []Object) (Object, error) {
+			return boolObj{value: true}, nil
+		},
+	}
 
-var falseCmd = &Command{
-	Name: "false",
-	Func: func(_ []Object) (Object, error) {
-		return boolObj{}, nil
-	},
-}
+	falseCmd = &Command{
+		Name: "false",
+		Func: func(_ []Object) (Object, error) {
+			return boolObj{}, nil
+		},
+	}
+)
 
 // EnvCmd is for the "env" command that allows for retrieving environment
 // variables. This takes a single argument that is the name of the variable.

@@ -22,10 +22,10 @@ func Test_EvalVarDecl(t *testing.T) {
 
 	e := New()
 
-	var c Context
+	var c context
 
 	for _, n := range nn {
-		if _, err := e.Eval(&c, n); err != nil {
+		if _, err := e.eval(&c, n); err != nil {
 			t.Errorf("%s\n", err)
 		}
 	}
@@ -78,10 +78,10 @@ func Test_EvalInterpolate(t *testing.T) {
 
 	e := New()
 
-	var c Context
+	var c context
 
 	for _, n := range nn {
-		if _, err := e.Eval(&c, n); err != nil {
+		if _, err := e.eval(&c, n); err != nil {
 			t.Errorf("%s\n", err)
 		}
 	}
