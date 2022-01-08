@@ -20,10 +20,9 @@ func Test_EvalVarDecl(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var (
-		e Evaluator
-		c Context
-	)
+	e := New()
+
+	var c Context
 
 	for _, n := range nn {
 		if _, err := e.Eval(&c, n); err != nil {
@@ -63,9 +62,7 @@ func Test_EvalRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var e Evaluator
-
-	e.AddCmd(PrintCmd)
+	e := New()
 
 	if err := e.Run(nn); err != nil {
 		t.Fatal(err)
@@ -79,10 +76,9 @@ func Test_EvalInterpolate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var (
-		e Evaluator
-		c Context
-	)
+	e := New()
+
+	var c Context
 
 	for _, n := range nn {
 		if _, err := e.Eval(&c, n); err != nil {

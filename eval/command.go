@@ -27,7 +27,10 @@ type CommandError struct {
 	Err error
 }
 
-var errNotEnoughArgs = errors.New("not enough arguments")
+var (
+	errNotEnoughArgs = errors.New("not enough arguments")
+	errTooManyArgs   = errors.New("too many arguments")
+)
 
 func (e CommandError) Error() string {
 	if e.Op != "" {
@@ -42,6 +45,14 @@ func (e CommandError) Error() string {
 func (c Command) Invoke(args []Object) (Object, error) {
 	if c.Argc > -1 {
 		if l := len(args); l != c.Argc {
+			if l > c.Argc {
+				return nil, CommandError{
+					Op:  "call",
+					Cmd: c.Name,
+					Err: errTooManyArgs,
+				}
+			}
+
 			return nil, CommandError{
 				Op:  "call",
 				Cmd: c.Name,
@@ -59,6 +70,20 @@ type TypeError struct {
 
 func (e TypeError) Error() string {
 	return "cannot use " + e.typ.String() + " as type " + e.expected.String()
+}
+
+var trueCmd = &Command{
+	Name: "true",
+	Func: func(_ []Object) (Object, error) {
+		return boolObj{value: true}, nil
+	},
+}
+
+var falseCmd = &Command{
+	Name: "false",
+	Func: func(_ []Object) (Object, error) {
+		return boolObj{}, nil
+	},
 }
 
 // EnvCmd is for the "env" command that allows for retrieving environment

@@ -75,6 +75,37 @@ type Evaluator struct {
 	finalizers []func() error
 }
 
+var builtinCmds = []*Command{
+	EnvCmd,
+	ExitCmd,
+	OpenCmd,
+	PrintCmd,
+	HeadCmd,
+	OptionsCmd,
+	GetCmd,
+	PutCmd,
+	PostCmd,
+	PatchCmd,
+	DeleteCmd,
+	SendCmd,
+	SniffCmd,
+
+	// pseudo-commands for bool literals
+	trueCmd,
+	falseCmd,
+}
+
+func New() *Evaluator {
+	e := &Evaluator{
+		cmds: make(map[string]*Command),
+	}
+
+	for _, cmd := range builtinCmds {
+		e.AddCmd(cmd)
+	}
+	return e
+}
+
 // AddCmd adds the given command to the evaluator.
 func (e *Evaluator) AddCmd(cmd *Command) {
 	if e.cmds == nil {
