@@ -1,11 +1,18 @@
 package eval
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"io"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/andrewpillar/req/syntax"
 )
+
+var server *httptest.Server
 
 func errh(t *testing.T) func(syntax.Pos, string) {
 	return func(pos syntax.Pos, msg string) {
@@ -13,8 +20,17 @@ func errh(t *testing.T) func(syntax.Pos, string) {
 	}
 }
 
+func readfile(t *testing.T, fname string) io.Reader {
+	b, err := os.ReadFile(filepath.Join("testdata", fname))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.NewReader(strings.Replace(string(b), "__endpoint__", server.URL, -1))
+}
+
 func Test_EvalVarDecl(t *testing.T) {
-	nn, err := syntax.ParseFile(filepath.Join("testdata", "vardecl.req"), errh(t))
+	nn, err := syntax.Parse("vardecl.req", readfile(t, "vardecl.req"), errh(t))
 
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +72,7 @@ func Test_EvalVarDecl(t *testing.T) {
 }
 
 func Test_EvalRef(t *testing.T) {
-	nn, err := syntax.ParseFile(filepath.Join("testdata", "refexpr.req"), errh(t))
+	nn, err := syntax.Parse("refexpr.req", readfile(t, "refexpr.req"), errh(t))
 
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +86,7 @@ func Test_EvalRef(t *testing.T) {
 }
 
 func Test_EvalInterpolate(t *testing.T) {
-	nn, err := syntax.ParseFile(filepath.Join("testdata", "vardecl.req"), errh(t))
+	nn, err := syntax.Parse("vardecl.req", readfile(t, "vardecl.req"), errh(t))
 
 	if err != nil {
 		t.Fatal(err)
@@ -118,5 +134,17 @@ func Test_EvalInterpolate(t *testing.T) {
 		if s.value != test.expected {
 			t.Errorf("tests[%d] - unexpected output for %q, expected=%q, got=%q\n", i, test.input, test.expected, s.value)
 		}
+	}
+}
+
+func TestMain(m *testing.M) {
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	code := m.Run()
+
+	if code != 0 {
+		os.Exit(code)
 	}
 }
