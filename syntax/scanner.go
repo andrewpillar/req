@@ -5,11 +5,12 @@ import "fmt"
 type scanner struct {
 	*source
 
-	pos Pos
-	op  Op
-	tok token
-	typ LitType
-	lit string
+	pos  Pos
+	op   Op
+	prec int
+	tok  token
+	typ  LitType
+	lit  string
 }
 
 func newScanner(src *source) *scanner {
@@ -102,6 +103,7 @@ func (sc *scanner) string() {
 func (sc *scanner) next() {
 redo:
 	sc.op = Op(0)
+	sc.prec = 0
 	sc.tok = token(0)
 	sc.lit = sc.lit[0:0]
 	sc.typ = LitType(0)
@@ -124,9 +126,16 @@ redo:
 	if isLetter(r) {
 		sc.ident()
 
-		if ok := isop(sc.lit); ok {
+		if op, ok := lookupOp(sc.lit); ok {
+			sc.op = op
+			sc.prec = opwordprec[op]
 			sc.tok = _Op
 			sc.lit = ""
+		}
+
+		if sc.lit == "true" || sc .lit == "false" {
+			sc.tok = _Literal
+			sc.typ = BoolLit
 		}
 		return
 	}
@@ -163,7 +172,7 @@ redo:
 	case '=':
 		if sc.get() == '=' {
 			sc.tok = _Op
-			sc.op = EqOp
+			sc.op, sc.prec = EqOp, precCmp
 			break
 		}
 		sc.unget()
@@ -171,26 +180,27 @@ redo:
 	case '!':
 		if sc.get() == '=' {
 			sc.tok = _Op
-			sc.op = NeqOp
+			sc.op, sc.prec = NeqOp, precCmp
 			break
 		}
 		sc.unget()
 	case '<':
+		sc.tok = _Op
+
 		if sc.get() == '=' {
-			sc.tok = _Op
-			sc.op = LeqOp
+			sc.op, sc.prec = LeqOp, precCmp
 			break
 		}
 		sc.unget()
-		sc.op = LtOp
+		sc.op, sc.prec = LtOp, precCmp
 	case '>':
 		if sc.get() == '=' {
 			sc.tok = _Op
-			sc.op = GeqOp
+			sc.op, sc.prec = GeqOp, precCmp
 			break
 		}
 		sc.unget()
-		sc.op = GtOp
+		sc.op, sc.prec = GtOp, precCmp
 	case '$':
 		sc.tok = _Ref
 	case '"':

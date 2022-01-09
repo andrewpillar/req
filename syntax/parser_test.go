@@ -457,6 +457,132 @@ func Test_ParseRef(t *testing.T) {
 	}
 }
 
+func Test_ParseIf(t *testing.T) {
+	nn, err := ParseFile(filepath.Join("testdata", "if.req"), errh(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		&IfStmt{
+			Cond: &Lit{
+				Type:  BoolLit,
+				Value: "true",
+			},
+		},
+		&IfStmt{
+			Cond: &Operation{
+				Op: OrOp,
+				Left: &Operation{
+					Op: EqOp,
+					Left: &Lit{
+						Type:  IntLit,
+						Value: "10",
+					},
+					Right: &Lit{
+						Type:  IntLit,
+						Value: "11",
+					},
+				},
+				Right: &Lit{
+					Type:  BoolLit,
+					Value: "true",
+				},
+			},
+		},
+		&IfStmt{
+			Cond: &Operation{
+				Op: AndOp,
+				Left: &Operation{
+					Op: EqOp,
+					Left: &Lit{
+						Type:  IntLit,
+						Value: "10",
+					},
+					Right: &Lit{
+						Type:  IntLit,
+						Value: "10",
+					},
+				},
+				Right: &Operation{
+					Op: EqOp,
+					Left: &Lit{
+						Type:  IntLit,
+						Value: "11",
+					},
+					Right: &Lit{
+						Type:  IntLit,
+						Value: "11",
+					},
+				},
+			},
+		},
+		&VarDecl{
+			Name: &Name{Value: "StatusCode"},
+			Value: &Lit{
+				Type:  IntLit,
+				Value: "204",
+			},
+		},
+		&IfStmt{
+			Cond: &Operation{
+				Op: AndOp,
+				Left: &Operation{
+					Op: GeqOp,
+					Left: &Ref{
+						Left: &Name{Value: "StatusCode"},
+					},
+					Right: &Lit{
+						Type:  IntLit,
+						Value: "200",
+					},
+				},
+				Right: &Operation{
+					Op: LtOp,
+					Left: &Ref{
+						Left: &Name{Value: "StatusCode"},
+					},
+					Right: &Lit{
+						Type:  IntLit,
+						Value: "300",
+					},
+				},
+			},
+			Else: &IfStmt{
+				Cond: &Operation{
+					Op: AndOp,
+					Left: &Operation{
+						Op: GeqOp,
+						Left: &Ref{
+							Left: &Name{Value: "StatusCode"},
+						},
+						Right: &Lit{
+							Type:  IntLit,
+							Value: "400",
+						},
+					},
+					Right: &Operation{
+						Op: LtOp,
+						Left: &Ref{
+							Left: &Name{Value: "StatusCode"},
+						},
+						Right: &Lit{
+							Type:  IntLit,
+							Value: "500",
+						},
+					},
+				},
+				Else: &BlockStmt{},
+			},
+		},
+	}
+
+	for i, n := range nn {
+		checkNode(t, expected[i], n)
+	}
+}
+
 func Test_Parser(t *testing.T) {
 	nn, err := ParseFile(filepath.Join("testdata", "gh.req"), errh(t))
 

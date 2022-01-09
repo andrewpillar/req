@@ -367,17 +367,21 @@ func (p *parser) matchstmt() *MatchStmt {
 	return n
 }
 
-func (p *parser) infixexpr() Node {
+func (p *parser) infixexpr(prec int) Node {
 	n := p.expr()
 
-	for p.tok == _Op {
+	for p.tok == _Op && p.prec > prec {
 		o := &Operation{
-			node: node{pos: n.Pos()},
+			node: p.node(),
 			Op:   p.op,
-			Left: n,
 		}
+
+		oprec := p.prec
+
 		p.next()
-		o.Right = p.infixexpr()
+
+		o.Left = n
+		o.Right = p.infixexpr(oprec)
 
 		n = o
 	}
@@ -391,7 +395,7 @@ func (p *parser) ifstmt() *IfStmt {
 
 	n := &IfStmt{
 		node: p.node(),
-		Cond: p.infixexpr(),
+		Cond: p.infixexpr(0),
 	}
 
 	n.Then = p.blockstmt()

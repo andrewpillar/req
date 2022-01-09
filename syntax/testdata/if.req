@@ -1,0 +1,23 @@
+
+
+if true {
+
+}
+
+if 10 == 11 or true {
+
+}
+
+if 10 == 10 and 11 == 11 {
+
+}
+
+StatusCode = 204;
+
+if $StatusCode >= 200 and $StatusCode < 300 {
+
+} else if $StatusCode >= 400 and $StatusCode < 500 {
+
+} else {
+
+}

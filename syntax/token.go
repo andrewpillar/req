@@ -49,6 +49,13 @@ const (
 	OrOp  // or
 )
 
+const (
+	precOr = iota + 1
+	precAnd
+	precCmp
+	precIn
+)
+
 type token uint
 
 //go:generate stringer -type token -linecomment
@@ -103,13 +110,23 @@ func lookupTok(s string) token {
 	return _Name
 }
 
-var opwords = map[string]Op{
-	"in":  InOp,
-	"and": AndOp,
-	"or":  OrOp,
-}
+var (
+	opwords = map[string]Op{
+		"in":  InOp,
+		"and": AndOp,
+		"or":  OrOp,
+	}
 
-func isop(s string) bool {
-	_, ok := opwords[s]
-	return ok
+	opwordprec = map[Op]int{
+		InOp:  precIn,
+		AndOp: precAnd,
+		OrOp:  precOr,
+	}
+)
+
+func lookupOp(s string) (Op, bool) {
+	if op, ok := opwords[s]; ok {
+		return op, ok
+	}
+	return Op(0), false
 }
