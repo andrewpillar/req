@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/andrewpillar/req/version"
 )
 
 // CommandFunc is the function for handling the invocation of a command.
@@ -411,7 +413,7 @@ func request(name string, args []Object) (Object, error) {
 	}
 
 	if val := req.Header.Get("User-Agent"); val == "" {
-		req.Header.Set("User-Agent", "req")
+		req.Header.Set("User-Agent", "req/"+version.Build)
 	}
 	return reqObj{
 		Request: req,

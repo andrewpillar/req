@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"flag"
 	"os"
 	"runtime"
 	"sort"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/andrewpillar/req/eval"
 	"github.com/andrewpillar/req/syntax"
+	"github.com/andrewpillar/req/version"
 )
 
 func files() ([]string, error) {
@@ -50,6 +52,21 @@ func errh(errs chan error) func(syntax.Pos, string) {
 
 func main() {
 	argv0 := os.Args[0]
+
+	var (
+		showVersion bool
+		startRepl   bool
+	)
+
+	fs := flag.NewFlagSet(argv0, flag.ExitOnError)
+	fs.BoolVar(&showVersion, "version", false, "show version and exit")
+	fs.BoolVar(&startRepl, "repl", false, "enter the repl")
+	fs.Parse(os.Args[1:])
+
+	if showVersion {
+		fmt.Println(version.Build)
+		return
+	}
 
 	fnames, err := files()
 
