@@ -193,7 +193,7 @@ func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
 	i := int(i64.value)
 
 	if i < 0 || i > end {
-		return nil, nil
+		return zeroObj{}, nil
 	}
 	return arrobj.items[i], nil
 }
@@ -215,7 +215,7 @@ func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 	obj, ok := hashobj.pairs[s.value]
 
 	if !ok {
-		return nil, nil
+		return zeroObj{}, nil
 	}
 	return obj, nil
 }

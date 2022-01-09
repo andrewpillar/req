@@ -26,6 +26,7 @@ const (
 	Stream                   // stream
 	Name                     // name
 	Key                      // key
+	Zero                     // zero
 )
 
 type Selector interface {
@@ -285,3 +286,9 @@ func (n nameObj) String() string {
 }
 
 func (n nameObj) Type() Type { return Name }
+
+type zeroObj struct {}
+
+func (z zeroObj) String() string { return "" }
+
+func (z zeroObj) Type() Type { return Zero }

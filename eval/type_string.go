@@ -19,11 +19,12 @@ func _() {
 	_ = x[Stream-9]
 	_ = x[Name-10]
 	_ = x[Key-11]
+	_ = x[Zero-12]
 }
 
-const _Type_name = "stringintboolarrayhashfilerequestresponsestreamnamekey"
+const _Type_name = "stringintboolarrayhashfilerequestresponsestreamnamekeyzero"
 
-var _Type_index = [...]uint8{0, 6, 9, 13, 18, 22, 26, 33, 41, 47, 51, 54}
+var _Type_index = [...]uint8{0, 6, 9, 13, 18, 22, 26, 33, 41, 47, 51, 54, 58}
 
 func (i Type) String() string {
 	i -= 1
