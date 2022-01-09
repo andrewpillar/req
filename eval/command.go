@@ -72,29 +72,6 @@ func (e TypeError) Error() string {
 	return "cannot use " + e.typ.String() + " as type " + e.expected.String()
 }
 
-var (
-	nilCmd = &Command{
-		Name: "nil",
-		Func: func(_ []Object) (Object, error) {
-			return nilObj{}, nil
-		},
-	}
-
-	trueCmd = &Command{
-		Name: "true",
-		Func: func(_ []Object) (Object, error) {
-			return boolObj{value: true}, nil
-		},
-	}
-
-	falseCmd = &Command{
-		Name: "false",
-		Func: func(_ []Object) (Object, error) {
-			return boolObj{}, nil
-		},
-	}
-)
-
 // EnvCmd is for the "env" command that allows for retrieving environment
 // variables. This takes a single argument that is the name of the variable.
 // This returns a string for the environment variable.

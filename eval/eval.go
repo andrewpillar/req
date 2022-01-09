@@ -89,11 +89,6 @@ var builtinCmds = []*Command{
 	DeleteCmd,
 	SendCmd,
 	SniffCmd,
-
-	// pseudo-commands for consts
-	trueCmd,
-	falseCmd,
-	nilCmd,
 }
 
 func New() *Evaluator {
@@ -198,7 +193,7 @@ func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
 	i := int(i64.value)
 
 	if i < 0 || i > end {
-		return nilObj{}, nil
+		return nil, nil
 	}
 	return arrobj.items[i], nil
 }
@@ -215,10 +210,12 @@ func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
 		}
 	}
 
-	obj, ok := hash.(hashObj).pairs[s.value]
+	hashobj := hash.(hashObj)
+
+	obj, ok := hashobj.pairs[s.value]
 
 	if !ok {
-		return nilObj{}, nil
+		return nil, nil
 	}
 	return obj, nil
 }
@@ -414,7 +411,9 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 			}
 			items = append(items, obj)
 		}
-		return arrayObj{items: items}, nil
+		return arrayObj{
+			items: items,
+		}, nil
 	case *syntax.Object:
 		pairs := make(map[string]Object)
 
