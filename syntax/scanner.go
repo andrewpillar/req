@@ -133,7 +133,7 @@ redo:
 			sc.lit = ""
 		}
 
-		if sc.lit == "true" || sc .lit == "false" {
+		if sc.lit == "true" || sc.lit == "false" {
 			sc.tok = _Literal
 			sc.typ = BoolLit
 		}
