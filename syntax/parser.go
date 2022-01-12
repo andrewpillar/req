@@ -14,6 +14,25 @@ type parser struct {
 	errc int
 }
 
+// ParseExpr parses all of the expressions from the given string. This is would
+// be used as part of a REPL to parse each line that is input.
+func ParseExpr(s string) ([]Node, error) {
+	errs := make([]error, 0)
+
+	p := parser{
+		scanner: newScanner(newSource("", strings.NewReader(s), func(pos Pos, msg string) {
+			errs = append(errs, errors.New(msg))
+		})),
+	}
+
+	nn, err := p.parse(true)
+
+	if err != nil {
+		return nil, errs[0]
+	}
+	return nn, nil
+}
+
 // ParseRef is a convenience function for parsing a single $Ref, $Ref.Dot,
 // or $Ref[Ind] expression. This is used as part of string interpolation. If
 // multiple errors occur during parsing, then the first of these errors is
@@ -43,7 +62,7 @@ func Parse(name string, r io.Reader, errh func(Pos, string)) ([]Node, error) {
 	p := parser{
 		scanner: newScanner(newSource(name, r, errh)),
 	}
-	return p.parse()
+	return p.parse(false)
 }
 
 func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
@@ -367,27 +386,6 @@ func (p *parser) matchstmt() *MatchStmt {
 	return n
 }
 
-func (p *parser) infixexpr(prec int) Node {
-	n := p.expr()
-
-	for p.tok == _Op && p.prec > prec {
-		o := &Operation{
-			node: p.node(),
-			Op:   p.op,
-		}
-
-		oprec := p.prec
-
-		p.next()
-
-		o.Left = n
-		o.Right = p.infixexpr(oprec)
-
-		n = o
-	}
-	return n
-}
-
 func (p *parser) ifstmt() *IfStmt {
 	if !p.got(_If) {
 		return nil
@@ -395,7 +393,7 @@ func (p *parser) ifstmt() *IfStmt {
 
 	n := &IfStmt{
 		node: p.node(),
-		Cond: p.infixexpr(0),
+		Cond: p.binexpr(0),
 	}
 
 	n.Then = p.blockstmt()
@@ -456,17 +454,36 @@ func (p *parser) operand() Node {
 }
 
 func (p *parser) expr() Node {
-	switch p.tok {
-	case _Name:
+	if p.tok == _Name {
 		n := p.command(p.name())
 
 		if p.got(_Arrow) {
 			return p.chain(n)
 		}
 		return n
-	default:
-		return p.operand()
 	}
+	return p.operand()
+}
+
+func (p *parser) binexpr(prec int) Node {
+	n := p.expr()
+
+	for p.tok == _Op && p.prec > prec {
+		o := &Operation{
+			node: p.node(),
+			Op:   p.op,
+		}
+
+		oprec := p.prec
+
+		p.next()
+
+		o.Left = n
+		o.Right = p.binexpr(oprec)
+
+		n = o
+	}
+	return n
 }
 
 func (p *parser) command(name *Name) *CommandStmt {
@@ -491,12 +508,12 @@ func (p *parser) vardecl(name *Name) *VarDecl {
 		return nil
 	}
 
-	n.Value = p.expr()
+	n.Value = p.binexpr(0)
 
 	return n
 }
 
-func (p *parser) stmt(inBlock bool) Node {
+func (p *parser) stmt(inRepl bool) Node {
 	var n Node
 
 	switch p.tok {
@@ -520,6 +537,12 @@ func (p *parser) stmt(inBlock bool) Node {
 	case _If:
 		n = p.ifstmt()
 		return n
+	case _Ref:
+		if inRepl {
+			n = p.ref()
+			break
+		}
+		fallthrough
 	default:
 		p.unexpected(p.tok)
 		p.advance(_Semi)
@@ -533,11 +556,11 @@ func (p *parser) stmt(inBlock bool) Node {
 	return n
 }
 
-func (p *parser) parse() ([]Node, error) {
+func (p *parser) parse(inRepl bool) ([]Node, error) {
 	nn := make([]Node, 0)
 
 	for p.tok != _EOF {
-		nn = append(nn, p.stmt(false))
+		nn = append(nn, p.stmt(inRepl))
 	}
 
 	if p.errc > 0 {
