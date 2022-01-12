@@ -277,11 +277,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 			return nil, e.err(v.Value.Pos(), errors.New("does not evaluate to value"))
 		}
 
-		val2, err := c.Get(v.Name.Value)
-
-		if err != nil {
-			c.Put(v.Name.Value, val)
-		}
+		val2, _ := c.Get(v.Name.Value)
 
 		if val2 != nil {
 			if err := value.CompareType(val, val2); err != nil {
