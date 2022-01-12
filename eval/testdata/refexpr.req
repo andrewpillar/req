@@ -38,3 +38,4 @@ print "Hash[\"Child\"][\"Array\"][1] =" $Hash["Child"]["Array"][1];
 Resp = GET "__endpoint__" -> send;
 
 print $Resp.StatusCode;
+print $Resp.Header["Content-Type"];

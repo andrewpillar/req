@@ -8,46 +8,45 @@ import (
 	"strconv"
 
 	"github.com/andrewpillar/req/syntax"
+	"github.com/andrewpillar/req/value"
 )
 
 // context stores the variables that have been set during a script's evaluation.
 type context struct {
-	symtab map[string]Object
+	symtab map[string]value.Value
 }
 
-// Put puts the given object into the current context under the given name.
-func (c *context) Put(name string, obj Object) {
+// Put puts the given valect into the current context under the given name.
+func (c *context) Put(name string, val value.Value) {
 	if c.symtab == nil {
-		c.symtab = make(map[string]Object)
+		c.symtab = make(map[string]value.Value)
 	}
-	c.symtab[name] = obj
+	c.symtab[name] = val
 }
 
-type errUndefined struct {
-	name string
+func errUndefined(name string) error {
+	return errors.New("undefined: $" + name)
 }
 
-func (e errUndefined) Error() string { return "undefined: $" + e.name }
-
-// Get returns an object of the given name. If no object exists, then this
+// Get returns an valect of the given name. If no valect exists, then this
 // errors.
-func (c *context) Get(name string) (Object, error) {
+func (c *context) Get(name string) (value.Value, error) {
 	if c.symtab == nil {
-		return nil, errUndefined{name: name}
+		return nil, errUndefined(name)
 	}
 
-	obj, ok := c.symtab[name]
+	val, ok := c.symtab[name]
 
 	if !ok {
-		return nil, errUndefined{name: name}
+		return nil, errUndefined(name)
 	}
-	return obj, nil
+	return val, nil
 }
 
 // Copy returns a copy of the current context.
 func (c *context) Copy() *context {
 	c2 := &context{
-		symtab: make(map[string]Object),
+		symtab: make(map[string]value.Value),
 	}
 
 	for k, v := range c.symtab {
@@ -112,7 +111,7 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 
 // interpolate parses the given string for {$Ref}, {$Ref.Dot}, and {$Ref[Ind]}
 // expressions and interpolates any that are found using the given context.
-func (e *Evaluator) interpolate(c *context, s string) (Object, error) {
+func (e *Evaluator) interpolate(c *context, s string) (value.Value, error) {
 	var buf bytes.Buffer
 
 	interpolate := false
@@ -133,13 +132,13 @@ func (e *Evaluator) interpolate(c *context, s string) (Object, error) {
 				return nil, err
 			}
 
-			obj, err := e.eval(c, n)
+			val, err := e.eval(c, n)
 
 			if err != nil {
 				return nil, err
 			}
 
-			buf.WriteString(obj.String())
+			buf.WriteString(val.Sprint())
 			expr = expr[0:0]
 			continue
 		}
@@ -150,101 +149,59 @@ func (e *Evaluator) interpolate(c *context, s string) (Object, error) {
 		}
 		buf.WriteRune(r)
 	}
-	return stringObj{value: buf.String()}, nil
+
+	return value.String{
+		Value: buf.String(),
+	}, nil
 }
 
 // resolveCommand resolves the given command node into a command and its
 // arguments that can be used for command invocation.
-func (e *Evaluator) resolveCommand(c *context, n *syntax.CommandStmt) (*Command, []Object, error) {
+func (e *Evaluator) resolveCommand(c *context, n *syntax.CommandStmt) (*Command, []value.Value, error) {
 	cmd, ok := e.cmds[n.Name.Value]
 
 	if !ok {
 		return nil, nil, errors.New("undefined command: " + n.Name.Value)
 	}
 
-	args := make([]Object, 0, len(n.Args))
+	args := make([]value.Value, 0, len(n.Args))
 
 	for _, arg := range n.Args {
-		obj, err := e.eval(c, arg)
+		val, err := e.eval(c, arg)
 
 		if err != nil {
 			return nil, nil, e.err(arg.Pos(), err)
 		}
-		args = append(args, obj)
+		args = append(args, val)
 	}
 	return cmd, args, nil
 }
 
-// resolveArrayIndex returns the object in the given array at the given index
-// if any. If there is no object, then nil is returned.
-func (e *Evaluator) resolveArrayIndex(arr, ind Object) (Object, error) {
-	i64, ok := ind.(intObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      ind.Type(),
-			expected: Int,
-		}
-	}
-
-	arrobj := arr.(arrayObj)
-	end := len(arrobj.items) - 1
-
-	i := int(i64.value)
-
-	if i < 0 || i > end {
-		return zeroObj{}, nil
-	}
-	return arrobj.items[i], nil
-}
-
-// resolveHashKey returns the object in the given hash under the given key if
-// any. If there is no object, then nil is returned.
-func (e *Evaluator) resolveHashKey(hash, key Object) (Object, error) {
-	s, ok := key.(stringObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      key.Type(),
-			expected: String,
-		}
-	}
-
-	hashobj := hash.(hashObj)
-
-	obj, ok := hashobj.pairs[s.value]
-
-	if !ok {
-		return zeroObj{}, nil
-	}
-	return obj, nil
-}
-
 // resolveDot resolves the given dot expression with the given context and
-// returns the object that is being referred to via the expression if any.
-func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (Object, error) {
+// returns the valect that is being referred to via the expression if any.
+func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (value.Value, error) {
 	left, err := e.eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
 	}
 
-	name, ok := left.(nameObj)
-
-	if !ok {
-		return nil, errors.New("cannot use type " + left.Type().String() + " as selector")
-	}
-
-	obj, err := c.Get(name.value)
+	name, err := value.ToName(left)
 
 	if err != nil {
 		return nil, err
 	}
 
-	sel, ok := obj.(Selector)
+	val, err := c.Get(name.Value)
 
-	if !ok {
-		return nil, errors.New("cannot use type " + obj.Type().String() + " as selector")
+	if err != nil {
+		return nil, err
+	}
+
+	sel, err := value.ToSelector(val)
+
+	if err != nil {
+		return nil, err
 	}
 
 	right, err := e.eval(c, n.Right)
@@ -253,38 +210,35 @@ func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (Object, error) {
 		return nil, err
 	}
 
-	obj, err = sel.Select(right)
+	val, err = sel.Select(right)
 
 	if err != nil {
 		return nil, err
 	}
-	return obj, nil
+	return val, nil
 }
 
-// resolveInd resolves the given index expression with the given context and
-// returns the object that is being referred to via the expression if any.
-func (e *Evaluator) resolveInd(c *context, n *syntax.IndExpr) (Object, error) {
+// resolveIndex resolves the given index expression with the given context and
+// returns the valect that is being referred to via the expression if any.
+func (e *Evaluator) resolveIndex(c *context, n *syntax.IndExpr) (value.Value, error) {
 	left, err := e.eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
 	}
 
-	var obj Object
-
-	switch v := left.(type) {
-	case nameObj:
-		obj, err = c.Get(v.value)
+	if name, ok := left.(value.Name); ok {
+		left, err = c.Get(name.Value)
 
 		if err != nil {
 			return nil, err
 		}
-	case arrayObj:
-		obj = v
-	case hashObj:
-		obj = v
-	default:
-		return nil, errors.New("type " + left.Type().String() + " does not support indexing")
+	}
+
+	index, err := value.ToIndex(left)
+
+	if err != nil {
+		return nil, err
 	}
 
 	right, err := e.eval(c, n.Right)
@@ -292,15 +246,7 @@ func (e *Evaluator) resolveInd(c *context, n *syntax.IndExpr) (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	switch obj.Type() {
-	case Array:
-		return e.resolveArrayIndex(obj, right)
-	case Hash:
-		return e.resolveHashKey(obj, right)
-	default:
-		return nil, errors.New("type " + obj.Type().String() + " does not support indexing")
-	}
+	return index.Get(right)
 }
 
 // err records the given error at the given position. If the given error is of
@@ -317,65 +263,76 @@ func (e *Evaluator) err(pos syntax.Pos, err error) error {
 	}
 }
 
-// eval evaluates the given node with the given context and returns the object
-// the node evaluates to, if any.
-func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
+// eval evaluates the given node and returns the value it evaluates to if any.
+func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
-		obj, err := e.eval(c, v.Value)
+		val, err := e.eval(c, v.Value)
 
 		if err != nil {
 			return nil, e.err(v.Value.Pos(), err)
 		}
 
-		if obj == nil {
+		if val == nil {
 			return nil, e.err(v.Value.Pos(), errors.New("does not evaluate to value"))
 		}
-		c.Put(v.Name.Value, obj)
+
+		val2, err := c.Get(v.Name.Value)
+
+		if err != nil {
+			c.Put(v.Name.Value, val)
+		}
+
+		if val2 != nil {
+			if err := value.CompareType(val, val2); err != nil {
+				return nil, e.err(v.Pos(), err)
+			}
+		}
+		c.Put(v.Name.Value, val)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
 		case *syntax.Name:
-			obj, err := c.Get(v.Value)
+			val, err := c.Get(v.Value)
 
 			if err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
-			return obj, nil
+			return val, nil
 		case *syntax.DotExpr:
-			obj, err := e.resolveDot(c, v)
+			val, err := e.resolveDot(c, v)
 
 			if err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
-			return obj, nil
+			return val, nil
 		case *syntax.IndExpr:
-			obj, err := e.resolveInd(c, v)
+			val, err := e.resolveIndex(c, v)
 
 			if err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
-			return obj, nil
+			return val, nil
 		default:
-			return nil, errors.New("invalid reference")
+			return nil, e.err(v.Pos(), errors.New("invalid reference"))
 		}
 	case *syntax.DotExpr:
-		obj, err := e.resolveDot(c, v)
+		val, err := e.resolveDot(c, v)
 
 		if err != nil {
 			return nil, e.err(v.Pos(), err)
 		}
-		return obj, nil
+		return val, nil
 	case *syntax.IndExpr:
-		obj, err := e.resolveInd(c, v)
+		val, err := e.resolveIndex(c, v)
 
 		if err != nil {
 			return nil, e.err(v.Pos(), err)
 		}
-		return obj, nil
+		return val, nil
 	case *syntax.Lit:
 		switch v.Type {
 		case syntax.StringLit:
-			obj, err := e.interpolate(c, v.Value)
+			val, err := e.interpolate(c, v.Value)
 
 			if err != nil {
 				// Offset original position of string so we report the position
@@ -386,46 +343,53 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 
 				return nil, e.err(pos, evalerr.Err)
 			}
-			return obj, err
+			return val, err
 		case syntax.IntLit:
 			i, _ := strconv.ParseInt(v.Value, 10, 64)
-			return intObj{value: i}, nil
+			return value.Int{Value: i}, nil
 		case syntax.BoolLit:
 			b := true
 
 			if v.Value != "true" {
 				b = false
 			}
-			return boolObj{value: b}, nil
+			return value.Bool{Value: b}, nil
 		}
 	case *syntax.Name:
-		return nameObj{value: v.Value}, nil
+		return value.Name{Value: v.Value}, nil
 	case *syntax.Array:
-		items := make([]Object, 0, len(v.Items))
+		items := make([]value.Value, 0, len(v.Items))
 
 		for _, it := range v.Items {
-			obj, err := e.eval(c, it)
+			val, err := e.eval(c, it)
 
 			if err != nil {
-				return nil, err
+				return nil, e.err(it.Pos(), err)
 			}
-			items = append(items, obj)
+			items = append(items, val)
 		}
-		return arrayObj{
-			items: items,
-		}, nil
+
+		arr, err := value.NewArray(items)
+
+		if err != nil {
+			return nil, e.err(v.Pos(), err)
+		}
+		return arr, nil
 	case *syntax.Object:
-		pairs := make(map[string]Object)
+		pairs := make(map[string]value.Value)
 
 		for _, n := range v.Pairs {
-			obj, err := e.eval(c, n.Value)
+			val, err := e.eval(c, n.Value)
 
 			if err != nil {
 				return nil, err
 			}
-			pairs[n.Key.Value] = obj
+			pairs[n.Key.Value] = val
 		}
-		return hashObj{pairs: pairs}, nil
+
+		return value.Object{
+			Pairs: pairs,
+		}, nil
 	case *syntax.BlockStmt:
 		// Make a copy of the current context so we can correctly shadow any
 		// variables declared outside of the block.
@@ -444,18 +408,18 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 			return nil, e.err(n.Pos(), err)
 		}
 
-		obj, err := cmd.invoke(args)
+		val, err := cmd.invoke(args)
 
 		if err != nil {
 			return nil, err
 		}
 
-		if f, ok := obj.(fileObj); ok {
+		if f, ok := val.(value.File); ok {
 			e.finalizers = append(e.finalizers, f.Close)
 		}
-		return obj, nil
+		return val, nil
 	case *syntax.MatchStmt:
-		obj, err := e.eval(c, v.Cond)
+		condval, err := e.eval(c, v.Cond)
 
 		if err != nil {
 			return nil, err
@@ -466,23 +430,23 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 		for _, stmt := range v.Cases {
 			h := fnv.New32a()
 
-			obj, err := e.eval(c, stmt.Value)
+			val, err := e.eval(c, stmt.Value)
 
 			if err != nil {
 				return nil, err
 			}
 
-			h.Write([]byte(obj.String()))
+			if err := value.CompareType(condval, val); err != nil {
+				return nil, e.err(stmt.Pos(), err)
+			}
+
+			h.Write([]byte(val.String()))
 
 			jmptab[h.Sum32()] = stmt.Then
 		}
 
-		if typ := obj.Type(); typ != String && typ != Int {
-			return nil, errors.New("cannot match against type " + typ.String())
-		}
-
 		h := fnv.New32a()
-		h.Write([]byte(obj.String()))
+		h.Write([]byte(condval.String()))
 
 		if n, ok := jmptab[h.Sum32()]; ok {
 			return e.eval(c, n)
@@ -493,7 +457,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 		}
 		return nil, nil
 	case *syntax.ChainExpr:
-		var obj Object
+		var val value.Value
 
 		for _, n := range v.Commands {
 			cmd, args, err := e.resolveCommand(c, n)
@@ -502,18 +466,57 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (Object, error) {
 				return nil, err
 			}
 
-			if obj != nil {
-				args = append([]Object{obj}, args...)
+			if val != nil {
+				args = append([]value.Value{val}, args...)
 			}
 
-			obj, err = cmd.invoke(args)
+			val, err = cmd.invoke(args)
 
 			if err != nil {
 				return nil, err
 			}
 		}
-		return obj, nil
+		return val, nil
 	case *syntax.IfStmt:
+		val, err := e.eval(c, v.Cond)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if value.Truthy(val) {
+			return e.eval(c, v.Then)
+		}
+
+		if v.Else != nil {
+			return e.eval(c, v.Else)
+		}
+		return nil, nil
+	case *syntax.Operation:
+		left, err := e.eval(c, v.Left)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if v.Right == nil {
+			return value.Bool{
+				Value: value.Truthy(left),
+			}, nil
+		}
+
+		right, err := e.eval(c, v.Right)
+
+		if err != nil {
+			return nil, e.err(v.Right.Pos(), err)
+		}
+
+		val, err := value.Compare(left, v.Op, right)
+
+		if err != nil {
+			return nil, e.err(v.Pos(), err)
+		}
+		return val, nil
 	}
 	return nil, nil
 }

@@ -8,7 +8,7 @@ Bool = true;
 
 Array = [1, 2, 3, 4];
 
-Hash = {
+Object = {
 	String: "string",
 	Array: [1, 2, 3, 4],
 	Child: {

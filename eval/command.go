@@ -10,11 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/andrewpillar/req/value"
 	"github.com/andrewpillar/req/version"
 )
 
-// CommandFunc is the function for handling the invocation of a command.
-type CommandFunc func(args []Object) (Object, error)
+// CommandFunc is the function for handling the invocation of a command. This
+// is passed the name of the command being invoked, and the list of arguments
+// given.
+type CommandFunc func(cmd string, args []value.Value) (value.Value, error)
 
 type Command struct {
 	Name string      // The name of the command.
@@ -34,7 +37,7 @@ var (
 	errTooManyArgs   = errors.New("too many arguments")
 )
 
-func (e CommandError) Error() string {
+func (e *CommandError) Error() string {
 	if e.Op != "" {
 		return "invalid " + e.Op + " to " + e.Cmd + ": " + e.Err.Error()
 	}
@@ -44,34 +47,25 @@ func (e CommandError) Error() string {
 // invoke executes the command. Before execution it will ensure the number of
 // arguments given the amount the command expects, otherwise this will return
 // a CommandError.
-func (c Command) invoke(args []Object) (Object, error) {
+func (c Command) invoke(args []value.Value) (value.Value, error) {
 	if c.Argc > -1 {
 		if l := len(args); l != c.Argc {
 			if l > c.Argc {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
 					Cmd: c.Name,
 					Err: errTooManyArgs,
 				}
 			}
 
-			return nil, CommandError{
+			return nil, &CommandError{
 				Op:  "call",
 				Cmd: c.Name,
 				Err: errNotEnoughArgs,
 			}
 		}
 	}
-	return c.Func(args)
-}
-
-type TypeError struct {
-	typ      Type
-	expected Type
-}
-
-func (e TypeError) Error() string {
-	return "cannot use " + e.typ.String() + " as type " + e.expected.String()
+	return c.Func(c.Name, args)
 }
 
 // EnvCmd is for the "env" command that allows for retrieving environment
@@ -83,20 +77,18 @@ var EnvCmd = &Command{
 	Func: env,
 }
 
-func env(args []Object) (Object, error) {
-	val := args[0]
+func env(cmd string, args []value.Value) (value.Value, error) {
+	str, err := value.ToString(args[0])
 
-	str, ok := val.(stringObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      val.Type(),
-			expected: String,
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
 		}
 	}
 
-	return stringObj{
-		value: os.Getenv(str.value),
+	return value.String{
+		Value: os.Getenv(str.Value),
 	}, nil
 }
 
@@ -108,19 +100,17 @@ var ExitCmd = &Command{
 	Func: exit,
 }
 
-func exit(args []Object) (Object, error) {
-	val := args[0]
+func exit(cmd string, args []value.Value) (value.Value, error) {
+	i, err := value.ToInt(args[0])
 
-	i, ok := val.(intObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      val.Type(),
-			expected: Int,
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
 		}
 	}
 
-	os.Exit(int(i.value))
+	os.Exit(int(i.Value))
 	return nil, nil
 }
 
@@ -133,35 +123,33 @@ var OpenCmd = &Command{
 	Func: open,
 }
 
-func open(args []Object) (Object, error) {
-	val := args[0]
-
-	str, ok := val.(stringObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      val.Type(),
-			expected: String,
-		}
-	}
-
-	if err := os.MkdirAll(filepath.Dir(str.value), os.FileMode(0755)); err != nil {
-		return nil, CommandError{
-			Cmd: "open",
-			Err: err,
-		}
-	}
-
-	f, err := os.OpenFile(str.value, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0644))
+func open(cmd string, args []value.Value) (value.Value, error) {
+	str, err := value.ToString(args[0])
 
 	if err != nil {
-		return nil, CommandError{
-			Cmd: "open",
+		return nil, &CommandError{
+			Cmd: cmd,
 			Err: err,
 		}
 	}
 
-	return fileObj{
+	if err := os.MkdirAll(filepath.Dir(str.Value), os.FileMode(0755)); err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	f, err := os.OpenFile(str.Value, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0644))
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	return value.File{
 		File: f,
 	}, nil
 }
@@ -175,11 +163,11 @@ var PrintCmd = &Command{
 	Func: print_,
 }
 
-func print_(args []Object) (Object, error) {
+func print_(cmd string, args []value.Value) (value.Value, error) {
 	if len(args) < 1 {
-		return nil, CommandError{
+		return nil, &CommandError{
 			Op:  "call",
-			Cmd: "print",
+			Cmd: cmd,
 			Err: errNotEnoughArgs,
 		}
 	}
@@ -189,7 +177,7 @@ func print_(args []Object) (Object, error) {
 	end := len(args) - 1
 	last := args[end]
 
-	if f, ok := last.(fileObj); ok {
+	if f, ok := last.(value.File); ok {
 		out = f.File
 		args = args[:end]
 	}
@@ -197,7 +185,12 @@ func print_(args []Object) (Object, error) {
 	var buf bytes.Buffer
 
 	for i, arg := range args {
-		buf.WriteString(arg.String())
+		if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
 
 		if i != end {
 			buf.WriteByte(' ')
@@ -207,8 +200,8 @@ func print_(args []Object) (Object, error) {
 	buf.WriteByte('\n')
 
 	if _, err := fmt.Fprint(out, buf.String()); err != nil {
-		return nil, CommandError{
-			Cmd: "print",
+		return nil, &CommandError{
+			Cmd: cmd,
 			Err: err,
 		}
 	}
@@ -219,11 +212,11 @@ var (
 	HeadCmd = &Command{
 		Name: "HEAD",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "HEAD",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -238,11 +231,11 @@ var (
 	OptionsCmd = &Command{
 		Name: "OPTIONS",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "OPTIONS",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -257,11 +250,11 @@ var (
 	GetCmd = &Command{
 		Name: "GET",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "GET",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -276,11 +269,11 @@ var (
 	PostCmd = &Command{
 		Name: "POST",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "POST",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -295,11 +288,11 @@ var (
 	PatchCmd = &Command{
 		Name: "PATCH",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "PATCH",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -314,11 +307,11 @@ var (
 	PutCmd = &Command{
 		Name: "PUT",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "PUT",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -333,11 +326,11 @@ var (
 	DeleteCmd = &Command{
 		Name: "DELETE",
 		Argc: -1,
-		Func: func(args []Object) (Object, error) {
+		Func: func(cmd string, args []value.Value) (value.Value, error) {
 			if len(args) < 1 {
-				return nil, CommandError{
+				return nil, &CommandError{
 					Op:  "call",
-					Cmd: "DELETE",
+					Cmd: cmd,
 					Err: errNotEnoughArgs,
 				}
 			}
@@ -350,72 +343,70 @@ var (
 	}
 )
 
-func request(name string, args []Object) (Object, error) {
+func request(cmd string, args []value.Value) (value.Value, error) {
 	var body io.Reader
 
-	arg0 := args[0]
+	endpoint, err := value.ToString(args[0])
 
-	endpoint, ok := arg0.(stringObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      arg0.Type(),
-			expected: String,
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
 		}
 	}
 
-	var hash hashObj
+	var obj value.Object
 
 	if len(args) > 1 {
-		arg1 := args[1]
+		obj, err = value.ToObject(args[1])
 
-		if arg1.Type() != Hash {
-			return nil, TypeError{
-				typ:      arg1.Type(),
-				expected: Hash,
+		if err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
 			}
 		}
-
-		hash = arg1.(hashObj)
 
 		if len(args) > 2 {
 			arg2 := args[2]
 
-			switch arg2.Type() {
-			case String, Array, Hash:
-				body = strings.NewReader(arg2.String())
-			case File:
-				f := arg2.(fileObj)
-
-				body = f.File
+			switch v := arg2.(type) {
+			case value.String, *value.Array, value.Object:
+				body = strings.NewReader(arg2.Sprint())
+			case value.File:
+				body = v.File
 			default:
-				return nil, errors.New("cannot use type " + arg2.Type().String() + " as request body")
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: errors.New("cannot use type " + value.Type(arg2) + " as request body"),
+				}
 			}
 		}
 	}
 
-	req, err := http.NewRequest(name, endpoint.value, body)
+	req, err := http.NewRequest(cmd, endpoint.Value, body)
 
 	if err != nil {
 		return nil, err
 	}
 
-	for key, val := range hash.pairs {
-		str, ok := val.(stringObj)
+	for key, val := range obj.Pairs {
+		str, err := value.ToString(val)
 
-		if !ok {
-			return nil, TypeError{
-				typ:      val.Type(),
-				expected: String,
+		if err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
 			}
 		}
-		req.Header.Set(key, str.value)
+		req.Header.Set(key, str.Value)
 	}
 
 	if val := req.Header.Get("User-Agent"); val == "" {
 		req.Header.Set("User-Agent", "req/"+version.Build)
 	}
-	return reqObj{
+
+	return value.Request{
 		Request: req,
 	}, nil
 }
@@ -426,15 +417,13 @@ var SendCmd = &Command{
 	Func: send,
 }
 
-func send(args []Object) (Object, error) {
-	val := args[0]
+func send(cmd string, args []value.Value) (value.Value, error) {
+	req, err := value.ToRequest(args[0])
 
-	req, ok := val.(reqObj)
-
-	if !ok {
-		return nil, TypeError{
-			typ:      val.Type(),
-			expected: Request,
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
 		}
 	}
 
@@ -443,44 +432,52 @@ func send(args []Object) (Object, error) {
 	resp, err := cli.Do(req.Request)
 
 	if err != nil {
-		return nil, CommandError{
-			Cmd: "send",
+		return nil, &CommandError{
+			Cmd: cmd,
 			Err: err,
 		}
 	}
-	return respObj{
+
+	return value.Response{
 		Response: resp,
 	}, nil
 }
 
 // SniffCmd is for the "sniff" command that allows for inspecting the mime type
-// of a file or a stream. This takes a single argument, and returns a string.
+// of a stream. This takes a single argument, and returns a string.
 var SniffCmd = &Command{
 	Name: "sniff",
 	Argc: 1,
 	Func: sniff,
 }
 
-func sniff(args []Object) (Object, error) {
-	val := args[0]
+func sniff(cmd string, args []value.Value) (value.Value, error) {
+	s, err := value.ToStream(args[0])
 
-	var rs io.ReadSeeker
-
-	switch v := val.(type) {
-	case streamObj:
-		rs = v.rs
-	case fileObj:
-		rs = v.File
-	default:
-		return nil, errors.New("cannot use type " + val.Type().String() + " as stream or file")
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
 	}
 
 	hdr := make([]byte, 512)
 
-	rs.Read(hdr)
-	rs.Seek(0, io.SeekStart)
+	if _, err := s.Read(hdr); err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
 
-	mime := http.DetectContentType(hdr)
+	if _, err := s.Seek(0, io.SeekStart); err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
 
-	return stringObj{value: mime}, nil
+	return value.String{
+		Value: http.DetectContentType(hdr),
+	}, nil
 }

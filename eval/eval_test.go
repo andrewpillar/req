@@ -1,15 +1,16 @@
 package eval
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/andrewpillar/req/syntax"
+	"github.com/andrewpillar/req/value"
 )
 
 var server *httptest.Server
@@ -47,26 +48,26 @@ func Test_EvalVarDecl(t *testing.T) {
 	}
 
 	tests := []struct {
-		varname  string
-		expected Type
+		varname string
+		typname string
 	}{
-		{"String", String},
-		{"Number", Int},
-		{"Bool", Bool},
-		{"Array", Array},
-		{"Hash", Hash},
+		{"String", "string"},
+		{"Number", "int"},
+		{"Bool", "bool"},
+		{"Array", "array"},
+		{"Object", "object"},
 	}
 
 	for i, test := range tests {
-		obj, err := c.Get(test.varname)
+		val, err := c.Get(test.varname)
 
 		if err != nil {
 			t.Errorf("tests[%d] - %s\n", i, err)
 			continue
 		}
 
-		if typ := obj.Type(); typ != test.expected {
-			t.Errorf("tests[%d] - unexpected type for variable %q, expected=%q, got=%q\n", i, test.varname, test.expected, typ)
+		if typ := value.Type(val); typ != test.typname {
+			t.Errorf("tests[%d] - unexpected type for variable %q, expected=%q, got=%q\n", i, test.varname, test.typname, typ)
 		}
 	}
 }
@@ -112,27 +113,29 @@ func Test_EvalInterpolate(t *testing.T) {
 		{`{$Array[0]}`, "1"},
 		{`{$Array[2]}`, "3"},
 		{`{$Array[3]}`, "4"},
-		{`{$Hash["String"]}`, "string"},
-		{`{$Hash["Array"][0]}`, "1"},
-		{`{$Hash["Child"]["Array"][2]}`, "three"},
+		{`{$Array}`, "[1 2 3 4]"},
+		{`{$Object["String"]}`, "string"},
+		{`{$Object["Array"][0]}`, "1"},
+		{`{$Object["Child"]["Array"][2]}`, "three"},
+		{`{$Object}`, "{Array:[1 2 3 4] Child:{Array:[one two three] Number:10} String:string}"},
 	}
 
 	for i, test := range tests {
-		obj, err := e.interpolate(&c, test.input)
+		val, err := e.interpolate(&c, test.input)
 
 		if err != nil {
 			t.Errorf("tests[%d] - failed to interpolate string: %s\n", i, err)
 			continue
 		}
 
-		s, ok := obj.(stringObj)
+  		str, err := value.ToString(val)
 
-		if !ok {
+		if err != nil {
 			t.Fatalf("tests[%d] - Eval.interpolate did not return a stringObj", i)
 		}
 
-		if s.value != test.expected {
-			t.Errorf("tests[%d] - unexpected output for %q, expected=%q, got=%q\n", i, test.input, test.expected, s.value)
+		if str.Value != test.expected {
+			t.Errorf("tests[%d] - unexpected output for %q, expected=%q, got=%q\n", i, test.input, test.expected, str.Value)
 		}
 	}
 }
