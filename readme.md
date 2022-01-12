@@ -11,6 +11,11 @@ making the call,
     Endpoint = "https://api.github.com";
     Token = env "GH_TOKEN";
 
+    if $Token == "" {
+        print "GH_TOKEN not set";
+        exit 1;
+    }
+
     Headers = {
         Authorization: "Bearer {$Token}",
     };
@@ -20,7 +25,7 @@ making the call,
     match $Resp.StatusCode {
         200 -> print $Resp.Body;
         _   -> {
-            print "Failed to send request" $Stderr;
+            print "Unexpected response:" $Resp.Status $Stderr;
             exit 1;
         }
     }

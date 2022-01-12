@@ -7,18 +7,20 @@ Endpoint = "https://api.github.com";
 Token = env "GH_TOKEN";
 
 if $Token == "" {
-	print "GH_TOKEN not set" $Stderr;
-	exit 1;
+    print "GH_TOKEN not set";
+    exit 1;
 }
 
-Resp = GET "{$Endpoint}/user" {
-	Authorization: "Bearer {$Token}",
-	Content-Type: "application/json; charset=utf-8",
-} -> send;
+Headers = {
+    Authorization: "Bearer {$Token}",
+};
+
+Resp = GET "{$Endpoint}/user" $Headers -> send;
 
 match $Resp.StatusCode {
-	200 -> print $Resp.Body $Stdout;
-	_   -> {
-		print $Resp.Body $Stderr;
-	}
+    200 -> print $Resp.Body;
+    _   -> {
+        print "Unexpected response:" $Resp.Status $Stderr;
+        exit 1;
+    }
 }
