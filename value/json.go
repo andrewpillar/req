@@ -44,19 +44,8 @@ func decodeJson(a interface{}) Value {
 func DecodeJSON(r io.Reader) (Value, error) {
 	var p interface{}
 
-//	m := make(map[string]interface{})
-
 	if err := json.NewDecoder(r).Decode(&p); err != nil {
 		return nil, err
 	}
 	return decodeJson(p), nil
-
-//	obj := Object{
-//		Pairs: make(map[string]Value),
-//	}
-//
-//	for k, v := range m {
-//		obj.Pairs[k] = decodeJson(v)
-//	}
-//	return obj, nil
 }
