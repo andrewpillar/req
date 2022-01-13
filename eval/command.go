@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -498,6 +499,10 @@ var (
 			Argc: 1,
 			Func: encodeBase64,
 		},
+		"form-data": &Command{
+			Argc: 1,
+			Func: encodeFormData,
+		},
 		"json": &Command{
 			Argc: 1,
 			Func: encodeJson,
@@ -564,6 +569,62 @@ func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 
 	return value.String{
 		Value: base64.StdEncoding.EncodeToString(src),
+	}, nil
+}
+
+func encodeFormData(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	obj, err := value.ToObject(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot encode " + value.Type(arg0)),
+		}
+	}
+
+	var buf bytes.Buffer
+
+	w := multipart.NewWriter(&buf)
+
+	for k, v := range obj.Pairs {
+		switch v2 := v.(type) {
+		case value.String, value.Int, value.Bool:
+			w.WriteField(k, v.Sprint())
+		case value.File:
+			sw, err := w.CreateFormFile(k, v2.Name())
+
+			if err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
+
+			if _, err := io.Copy(sw, v2); err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
+
+			if _, err := v2.Seek(0, io.SeekStart); err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
+		default:
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: errors.New("key error " + k + ": cannot encode " + value.Type(v)),
+			}
+		}
+	}
+
+	return value.String{
+		Value: buf.String(),
 	}, nil
 }
 
@@ -674,34 +735,21 @@ func decodeJson(cmd string, args []value.Value) (value.Value, error) {
 
 	var (
 		r      io.Reader
-		rewind func() error
+		stream value.Stream
 	)
 
 	switch v := arg0.(type) {
 	case value.String:
 		r = strings.NewReader(v.Value)
-	case value.File:
-		r = v.File
-		rewind = func() error {
-			if _, err := v.File.Seek(0, io.SeekStart); err != nil {
-				return err
-			}
-			return nil
-		}
 	case value.Stream:
 		r = v
-		rewind = func() error {
-			if _, err := v.Seek(0, io.SeekStart); err != nil {
-				return err
-			}
-			return nil
-		}
+		stream = v
 	default:
 		return nil, errors.New("cannot decode " + value.Type(arg0))
 	}
 
-	if rewind != nil {
-		if err := rewind(); err != nil {
+	if stream != nil {
+		if _, err := stream.Seek(0, io.SeekStart); err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
