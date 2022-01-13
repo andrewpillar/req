@@ -1,4 +1,4 @@
-// Package eval handles the evaluation of a req script.
+// Package Eval handles the Evaluation of a req script.
 package eval
 
 import (
@@ -11,13 +11,13 @@ import (
 	"github.com/andrewpillar/req/value"
 )
 
-// context stores the variables that have been set during a script's evaluation.
-type context struct {
+// Context stores the variables that have been set during a script's Evaluation.
+type Context struct {
 	symtab map[string]value.Value
 }
 
-// Put puts the given valect into the current context under the given name.
-func (c *context) Put(name string, val value.Value) {
+// Put puts the given valect into the current Context under the given name.
+func (c *Context) Put(name string, val value.Value) {
 	if c.symtab == nil {
 		c.symtab = make(map[string]value.Value)
 	}
@@ -30,7 +30,7 @@ func errUndefined(name string) error {
 
 // Get returns an valect of the given name. If no valect exists, then this
 // errors.
-func (c *context) Get(name string) (value.Value, error) {
+func (c *Context) Get(name string) (value.Value, error) {
 	if c.symtab == nil {
 		return nil, errUndefined(name)
 	}
@@ -43,9 +43,9 @@ func (c *context) Get(name string) (value.Value, error) {
 	return val, nil
 }
 
-// Copy returns a copy of the current context.
-func (c *context) Copy() *context {
-	c2 := &context{
+// Copy returns a copy of the current Context.
+func (c *Context) Copy() *Context {
+	c2 := &Context{
 		symtab: make(map[string]value.Value),
 	}
 
@@ -55,7 +55,7 @@ func (c *context) Copy() *context {
 	return c2
 }
 
-// Error records an error that occurred during evaluation and the position at
+// Error records an error that occurred during Evaluation and the position at
 // which the error occurred and the original error itself.
 type Error struct {
 	Pos syntax.Pos
@@ -69,7 +69,7 @@ type Evaluator struct {
 	cmds map[string]*Command
 
 	// slice of cleanup functions to call to cleanup any resources opened
-	// during evaluation such as file handles. These are not called if the
+	// during Evaluation such as file handles. These are not called if the
 	// "exit" command is called however.
 	finalizers []func() error
 }
@@ -101,7 +101,7 @@ func New() *Evaluator {
 	return e
 }
 
-// AddCmd adds the given command to the evaluator.
+// AddCmd adds the given command to the Evaluator.
 func (e *Evaluator) AddCmd(cmd *Command) {
 	if e.cmds == nil {
 		e.cmds = make(map[string]*Command)
@@ -110,8 +110,8 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 }
 
 // interpolate parses the given string for {$Ref}, {$Ref.Dot}, and {$Ref[Ind]}
-// expressions and interpolates any that are found using the given context.
-func (e *Evaluator) interpolate(c *context, s string) (value.Value, error) {
+// expressions and interpolates any that are found using the given Context.
+func (e *Evaluator) interpolate(c *Context, s string) (value.Value, error) {
 	var buf bytes.Buffer
 
 	interpolate := false
@@ -132,7 +132,7 @@ func (e *Evaluator) interpolate(c *context, s string) (value.Value, error) {
 				return nil, err
 			}
 
-			val, err := e.eval(c, n)
+			val, err := e.Eval(c, n)
 
 			if err != nil {
 				return nil, err
@@ -157,7 +157,7 @@ func (e *Evaluator) interpolate(c *context, s string) (value.Value, error) {
 
 // resolveCommand resolves the given command node into a command and its
 // arguments that can be used for command invocation.
-func (e *Evaluator) resolveCommand(c *context, n *syntax.CommandStmt) (*Command, []value.Value, error) {
+func (e *Evaluator) resolveCommand(c *Context, n *syntax.CommandStmt) (*Command, []value.Value, error) {
 	cmd, ok := e.cmds[n.Name.Value]
 
 	if !ok {
@@ -167,7 +167,7 @@ func (e *Evaluator) resolveCommand(c *context, n *syntax.CommandStmt) (*Command,
 	args := make([]value.Value, 0, len(n.Args))
 
 	for _, arg := range n.Args {
-		val, err := e.eval(c, arg)
+		val, err := e.Eval(c, arg)
 
 		if err != nil {
 			return nil, nil, e.err(arg.Pos(), err)
@@ -177,10 +177,10 @@ func (e *Evaluator) resolveCommand(c *context, n *syntax.CommandStmt) (*Command,
 	return cmd, args, nil
 }
 
-// resolveDot resolves the given dot expression with the given context and
+// resolveDot resolves the given dot expression with the given Context and
 // returns the valect that is being referred to via the expression if any.
-func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (value.Value, error) {
-	left, err := e.eval(c, n.Left)
+func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (value.Value, error) {
+	left, err := e.Eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (value.Value, erro
 		return nil, err
 	}
 
-	right, err := e.eval(c, n.Right)
+	right, err := e.Eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
@@ -218,10 +218,10 @@ func (e *Evaluator) resolveDot(c *context, n *syntax.DotExpr) (value.Value, erro
 	return val, nil
 }
 
-// resolveIndex resolves the given index expression with the given context and
+// resolveIndex resolves the given index expression with the given Context and
 // returns the valect that is being referred to via the expression if any.
-func (e *Evaluator) resolveIndex(c *context, n *syntax.IndExpr) (value.Value, error) {
-	left, err := e.eval(c, n.Left)
+func (e *Evaluator) resolveIndex(c *Context, n *syntax.IndExpr) (value.Value, error) {
+	left, err := e.Eval(c, n.Left)
 
 	if err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func (e *Evaluator) resolveIndex(c *context, n *syntax.IndExpr) (value.Value, er
 		return nil, err
 	}
 
-	right, err := e.eval(c, n.Right)
+	right, err := e.Eval(c, n.Right)
 
 	if err != nil {
 		return nil, err
@@ -263,18 +263,18 @@ func (e *Evaluator) err(pos syntax.Pos, err error) error {
 	}
 }
 
-// eval evaluates the given node and returns the value it evaluates to if any.
-func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
+// Eval Evaluates the given node and returns the value it Evaluates to if any.
+func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 	switch v := n.(type) {
 	case *syntax.VarDecl:
-		val, err := e.eval(c, v.Value)
+		val, err := e.Eval(c, v.Value)
 
 		if err != nil {
 			return nil, e.err(v.Value.Pos(), err)
 		}
 
 		if val == nil {
-			return nil, e.err(v.Value.Pos(), errors.New("does not evaluate to value"))
+			return nil, e.err(v.Value.Pos(), errors.New("does not Evaluate to value"))
 		}
 
 		val2, _ := c.Get(v.Name.Value)
@@ -332,12 +332,12 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 
 			if err != nil {
 				// Offset original position of string so we report the position
-				// in the evaluated expression.
-				evalerr := err.(Error)
+				// in the Evaluated expression.
+				Evalerr := err.(Error)
 				pos := v.Pos()
-				pos.Col += evalerr.Pos.Col + 1
+				pos.Col += Evalerr.Pos.Col + 1
 
-				return nil, e.err(pos, evalerr.Err)
+				return nil, e.err(pos, Evalerr.Err)
 			}
 			return val, err
 		case syntax.IntLit:
@@ -357,7 +357,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 		items := make([]value.Value, 0, len(v.Items))
 
 		for _, it := range v.Items {
-			val, err := e.eval(c, it)
+			val, err := e.Eval(c, it)
 
 			if err != nil {
 				return nil, e.err(it.Pos(), err)
@@ -375,7 +375,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 		pairs := make(map[string]value.Value)
 
 		for _, n := range v.Pairs {
-			val, err := e.eval(c, n.Value)
+			val, err := e.Eval(c, n.Value)
 
 			if err != nil {
 				return nil, err
@@ -387,12 +387,12 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 			Pairs: pairs,
 		}, nil
 	case *syntax.BlockStmt:
-		// Make a copy of the current context so we can correctly shadow any
+		// Make a copy of the current Context so we can correctly shadow any
 		// variables declared outside of the block.
 		c2 := c.Copy()
 
 		for _, n := range v.Nodes {
-			if _, err := e.eval(c2, n); err != nil {
+			if _, err := e.Eval(c2, n); err != nil {
 				return nil, err
 			}
 		}
@@ -415,7 +415,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 		}
 		return val, nil
 	case *syntax.MatchStmt:
-		condval, err := e.eval(c, v.Cond)
+		condval, err := e.Eval(c, v.Cond)
 
 		if err != nil {
 			return nil, err
@@ -426,7 +426,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 		for _, stmt := range v.Cases {
 			h := fnv.New32a()
 
-			val, err := e.eval(c, stmt.Value)
+			val, err := e.Eval(c, stmt.Value)
 
 			if err != nil {
 				return nil, err
@@ -445,11 +445,11 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 		h.Write([]byte(condval.String()))
 
 		if n, ok := jmptab[h.Sum32()]; ok {
-			return e.eval(c, n)
+			return e.Eval(c, n)
 		}
 
 		if v.Default != nil {
-			return e.eval(c, v.Default)
+			return e.Eval(c, v.Default)
 		}
 		return nil, nil
 	case *syntax.ChainExpr:
@@ -474,22 +474,22 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 		}
 		return val, nil
 	case *syntax.IfStmt:
-		val, err := e.eval(c, v.Cond)
+		val, err := e.Eval(c, v.Cond)
 
 		if err != nil {
 			return nil, err
 		}
 
 		if value.Truthy(val) {
-			return e.eval(c, v.Then)
+			return e.Eval(c, v.Then)
 		}
 
 		if v.Else != nil {
-			return e.eval(c, v.Else)
+			return e.Eval(c, v.Else)
 		}
 		return nil, nil
 	case *syntax.Operation:
-		left, err := e.eval(c, v.Left)
+		left, err := e.Eval(c, v.Left)
 
 		if err != nil {
 			return nil, err
@@ -501,7 +501,7 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 			}, nil
 		}
 
-		right, err := e.eval(c, v.Right)
+		right, err := e.Eval(c, v.Right)
 
 		if err != nil {
 			return nil, e.err(v.Right.Pos(), err)
@@ -517,12 +517,12 @@ func (e *Evaluator) eval(c *context, n syntax.Node) (value.Value, error) {
 	return nil, nil
 }
 
-// Run evaluates all of the given nodes.
+// Run Evaluates all of the given nodes.
 func (e *Evaluator) Run(nn []syntax.Node) error {
-	var c context
+	var c Context
 
 	for _, n := range nn {
-		if _, err := e.eval(&c, n); err != nil {
+		if _, err := e.Eval(&c, n); err != nil {
 			return err
 		}
 	}

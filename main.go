@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"os/signal"
 	"runtime"
 	"sort"
 	"strings"
@@ -44,6 +48,52 @@ func files() ([]string, error) {
 	return fnames, nil
 }
 
+func repl(ctx context.Context, w io.Writer, r io.Reader) {
+	sc := bufio.NewScanner(r)
+
+	e := eval.New()
+
+	var c eval.Context
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			fmt.Print("> ")
+
+			if !sc.Scan() {
+				return
+			}
+
+			if err := sc.Err(); err != nil {
+				fmt.Fprintln(w, "ERR", err)
+				continue
+			}
+
+			nn, err := syntax.ParseExpr(sc.Text())
+
+			if err != nil {
+				fmt.Fprintln(w, err)
+				continue
+			}
+
+			for _, n := range nn {
+				val, err := e.Eval(&c, n)
+
+				if err != nil {
+					fmt.Fprintln(w, err)
+					continue
+				}
+
+				if val != nil {
+					fmt.Fprintln(w, val.String())
+				}
+			}
+		}
+	}
+}
+
 func errh(errs chan error) func(syntax.Pos, string) {
 	return func(pos syntax.Pos, msg string) {
 		errs <- errors.New(pos.String() + " - " + msg)
@@ -65,6 +115,21 @@ func main() {
 
 	if showVersion {
 		fmt.Println(version.Build)
+		return
+	}
+
+	if startRepl {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		ch := make(chan os.Signal, 1)
+
+		signal.Notify(ch, os.Interrupt)
+
+		go repl(ctx, os.Stdout, os.Stdin)
+
+		<-ch
+		cancel()
 		return
 	}
 

@@ -39,10 +39,10 @@ func Test_EvalVarDecl(t *testing.T) {
 
 	e := New()
 
-	var c context
+	var c Context
 
 	for _, n := range nn {
-		if _, err := e.eval(&c, n); err != nil {
+		if _, err := e.Eval(&c, n); err != nil {
 			t.Errorf("%s\n", err)
 		}
 	}
@@ -95,10 +95,10 @@ func Test_EvalInterpolate(t *testing.T) {
 
 	e := New()
 
-	var c context
+	var c Context
 
 	for _, n := range nn {
-		if _, err := e.eval(&c, n); err != nil {
+		if _, err := e.Eval(&c, n); err != nil {
 			t.Errorf("%s\n", err)
 		}
 	}
@@ -139,6 +139,19 @@ func Test_EvalInterpolate(t *testing.T) {
 		}
 	}
 }
+
+//func Test_ValueComparison(t *testing.T) {
+//	nn, err := syntax.Parse("cmp.req", readfile(t, "cmp.req"), errh(t))
+//
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	tests := []struct{
+//	}{
+//
+//	}
+//}
 
 func TestMain(m *testing.M) {
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
