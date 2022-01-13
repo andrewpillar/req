@@ -512,27 +512,6 @@ var (
 			Func: encodeUrl,
 		},
 	}
-
-	DecodeCmd = &Command{
-		Name: "decode",
-		Argc: 2,
-		Func: decode,
-	}
-
-	decodetab = map[string]*Command{
-		"base64": &Command{
-			Argc: 1,
-			Func: decodeBase64,
-		},
-		"json": &Command{
-			Argc: 1,
-			Func: decodeJson,
-		},
-		"url": &Command{
-			Argc: 1,
-			Func: decodeUrl,
-		},
-	}
 )
 
 func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
@@ -704,6 +683,33 @@ func encode(cmd string, args []value.Value) (value.Value, error) {
 	return subcmd.invoke(args[1:])
 }
 
+var (
+	DecodeCmd = &Command{
+		Name: "decode",
+		Argc: 2,
+		Func: decode,
+	}
+
+	decodetab = map[string]*Command{
+		"base64": &Command{
+			Argc: 1,
+			Func: decodeBase64,
+		},
+		"form-data": &Command{
+			Argc: 1,
+			Func: decodeFormData,
+		},
+		"json": &Command{
+			Argc: 1,
+			Func: decodeJson,
+		},
+		"url": &Command{
+			Argc: 1,
+			Func: decodeUrl,
+		},
+	}
+)
+
 func decodeBase64(cmd string, args []value.Value) (value.Value, error) {
 	arg0 := args[0]
 
@@ -730,6 +736,42 @@ func decodeBase64(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
+//TODO: implement decoding of form-data
+func decodeFormData(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	var (
+		r      io.Reader
+		stream value.Stream
+	)
+
+	switch v := arg0.(type) {
+	case value.String:
+		r = strings.NewReader(v.Value)
+	case value.Stream:
+		r = v
+		stream = v
+	default:
+		return nil, errors.New("cannot decode " + value.Type(arg0))
+	}
+
+	obj := value.Object{
+		Pairs: make(map[string]value.Value),
+	}
+
+	io.Copy(io.Discard, r)
+
+	if stream != nil {
+		if _, err := stream.Seek(0, io.SeekStart); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+	}
+	return obj, nil
+}
+
 func decodeJson(cmd string, args []value.Value) (value.Value, error) {
 	arg0 := args[0]
 
@@ -748,21 +790,21 @@ func decodeJson(cmd string, args []value.Value) (value.Value, error) {
 		return nil, errors.New("cannot decode " + value.Type(arg0))
 	}
 
-	if stream != nil {
-		if _, err := stream.Seek(0, io.SeekStart); err != nil {
-			return nil, &CommandError{
-				Cmd: cmd,
-				Err: err,
-			}
-		}
-	}
-
 	val, err := value.DecodeJSON(r)
 
 	if err != nil {
 		return nil, &CommandError{
 			Cmd: cmd,
 			Err: err,
+		}
+	}
+
+	if stream != nil {
+		if _, err := stream.Seek(0, io.SeekStart); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
 		}
 	}
 	return val, nil
