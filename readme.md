@@ -23,7 +23,11 @@ making the call,
     Resp = GET "{$Endpoint}/user" $Headers -> send;
 
     match $Resp.StatusCode {
-        200 -> print $Resp.Body;
+        200 -> {
+            User = decode json $Resp.Body;
+
+            print "Hello {$User["login"]}";
+        }
         _   -> {
             print "Unexpected response:" $Resp.Status $Stderr;
             exit 1;
