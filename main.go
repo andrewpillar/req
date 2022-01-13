@@ -71,7 +71,13 @@ func repl(ctx context.Context, w io.Writer, r io.Reader) {
 				continue
 			}
 
-			nn, err := syntax.ParseExpr(sc.Text())
+			line := sc.Text()
+
+			if line == "" {
+				continue
+			}
+
+			nn, err := syntax.ParseExpr(line)
 
 			if err != nil {
 				fmt.Fprintln(w, err)
