@@ -522,8 +522,8 @@ func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 	switch v := arg0.(type) {
 	case value.String:
 		src = []byte(v.Value)
-	case value.File:
-		b, err := io.ReadAll(v.File)
+	case value.Stream:
+		b, err := io.ReadAll(v)
 
 		if err != nil {
 			return nil, &CommandError{
@@ -532,7 +532,7 @@ func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 			}
 		}
 
-		if _, err := v.File.Seek(0, io.SeekStart); err != nil {
+		if _, err := v.Seek(0, io.SeekStart); err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
