@@ -12,7 +12,7 @@ making the call,
     Token = env "GH_TOKEN";
 
     if $Token == "" {
-        print "GH_TOKEN not set";
+        print "GH_TOKEN not set" $Stderr;
         exit 1;
     }
 
