@@ -31,7 +31,7 @@ func Type(v Value) string {
 }
 
 func typeError(typ1, typ2 valueType) error {
-	return fmt.Errorf("cannot use %s as %s\n", typ1, typ2)
+	return fmt.Errorf("cannot use %s as %s", typ1, typ2)
 }
 
 // Stream represents a stream of data that can be read. This would either be a
