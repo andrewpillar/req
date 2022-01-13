@@ -13,7 +13,7 @@ module="$(head -1 go.mod | awk '{ print $2 }')"
 version="$(_version)"
 
 [ "$version" = "" ] && {
-	version="devel $(git log -n 1 --format='format: +%h %cd' HEAD)"
+	version="devel $(git log -n 1 --format='format:+%h %cd' HEAD)"
 }
 
 [ ! -d bin ] && mkdir bin
