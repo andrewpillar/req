@@ -2,6 +2,7 @@ package value
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"hash/fnv"
 
@@ -28,13 +29,22 @@ func NewArray(items []Value) (*Array, error) {
 		Items: items,
 	}
 
-	for _, it := range v.Items {
+	v.hashItems()
+
+	return v, nil
+}
+
+func (a *Array) hashItems() {
+	for _, it := range a.Items {
 		h := fnv.New32a()
 		h.Write([]byte(it.String()))
 
-		v.set[h.Sum32()] = struct{}{}
+		a.set[h.Sum32()] = struct{}{}
 	}
-	return v, nil
+}
+
+func (a *Array) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.Items)
 }
 
 func (a *Array) Has(v Value) bool {

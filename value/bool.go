@@ -1,6 +1,10 @@
 package value
 
-import "github.com/andrewpillar/req/syntax"
+import (
+	"encoding/json"
+
+	"github.com/andrewpillar/req/syntax"
+)
 
 type Bool struct {
 	Value bool
@@ -13,6 +17,10 @@ func ToBool(v Value) (Bool, error) {
 		return Bool{}, typeError(v.valueType(), boolType)
 	}
 	return b, nil
+}
+
+func (b Bool) MarshalJSON() ([]byte, error) {
+	return json.Marshal(b.Value)
 }
 
 func (b Bool) String() string {

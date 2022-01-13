@@ -1,8 +1,16 @@
 package value
 
-import "github.com/andrewpillar/req/syntax"
+import (
+	"encoding/json"
+
+	"github.com/andrewpillar/req/syntax"
+)
 
 type Zero struct{}
+
+func (z Zero) MarshalJSON() ([]byte, error) {
+	return json.Marshal(nil)
+}
 
 func (z Zero) String() string {
 	return ""

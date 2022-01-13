@@ -493,6 +493,10 @@ func (p *parser) command(name *Name) *CommandStmt {
 	}
 
 	for p.tok != _Arrow && p.tok != _Semi && p.tok != _EOF {
+		if p.tok == _Name {
+			n.Args = append(n.Args, p.name())
+			continue
+		}
 		n.Args = append(n.Args, p.operand())
 	}
 	return n

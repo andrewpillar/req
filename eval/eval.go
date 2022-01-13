@@ -75,6 +75,8 @@ type Evaluator struct {
 }
 
 var builtinCmds = []*Command{
+	DecodeCmd,
+	EncodeCmd,
 	EnvCmd,
 	ExitCmd,
 	OpenCmd,

@@ -1,6 +1,7 @@
 package value
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/andrewpillar/req/syntax"
@@ -17,6 +18,10 @@ func ToString(v Value) (String, error) {
 		return String{}, typeError(v.valueType(), stringType)
 	}
 	return s, nil
+}
+
+func (s String) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Value)
 }
 
 func (s String) String() string {

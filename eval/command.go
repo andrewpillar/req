@@ -2,6 +2,8 @@ package eval
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -480,4 +482,217 @@ func sniff(cmd string, args []value.Value) (value.Value, error) {
 	return value.String{
 		Value: http.DetectContentType(hdr),
 	}, nil
+}
+
+var (
+	EncodeCmd = &Command{
+		Name: "encode",
+		Argc: 2,
+		Func: encode,
+	}
+
+	encodetab = map[string]*Command{
+		"base64": &Command{
+			Argc: 1,
+			Func: encodeBase64,
+		},
+		"json": &Command{
+			Argc: 1,
+			Func: encodeJson,
+		},
+	}
+
+	DecodeCmd = &Command{
+		Name: "decode",
+		Argc: 2,
+		Func: decode,
+	}
+
+	decodetab = map[string]*Command{
+		"base64": &Command{
+			Argc: 1,
+			Func: decodeBase64,
+		},
+		"json": &Command{
+			Argc: 1,
+			Func: decodeJson,
+		},
+	}
+)
+
+func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	var src []byte
+
+	switch v := arg0.(type) {
+	case value.String:
+		src = []byte(v.Value)
+	case value.File:
+		b, err := io.ReadAll(v.File)
+
+		if err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+
+		if _, err := v.File.Seek(0, io.SeekStart); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+		src = b
+	default:
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot encode " + value.Type(arg0)),
+		}
+	}
+
+	return value.String{
+		Value: base64.StdEncoding.EncodeToString(src),
+	}, nil
+}
+
+func encodeJson(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	switch arg0.(type) {
+	case *value.Array:
+	case value.Object:
+	default:
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot encode " + value.Type(arg0)),
+		}
+	}
+
+	b, err := json.Marshal(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	return value.String{
+		Value: string(b),
+	}, nil
+}
+
+func encode(cmd string, args []value.Value) (value.Value, error) {
+	name, err := value.ToName(args[0])
+
+	if err != nil {
+		return nil, err
+	}
+
+	subcmd, ok := encodetab[name.Value]
+
+	if !ok {
+		return nil, errors.New("undefined command: " + cmd + " " + name.Value)
+	}
+
+	subcmd.Name = cmd  + " " + name.Value
+
+	return subcmd.invoke(args[1:])
+}
+
+func decodeBase64(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	str, err := value.ToString(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot decode " + value.Type(arg0)),
+		}
+	}
+
+	b, err := base64.StdEncoding.DecodeString(str.Value)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	return value.String{
+		Value: string(b),
+	}, nil
+}
+
+func decodeJson(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	var (
+		r      io.Reader
+		rewind func() error
+	)
+
+	switch v := arg0.(type) {
+	case value.String:
+		r = strings.NewReader(v.Value)
+	case value.File:
+		r = v.File
+		rewind = func() error {
+			if _, err := v.File.Seek(0, io.SeekStart); err != nil {
+				return err
+			}
+			return nil
+		}
+	case value.Stream:
+		r = v
+		rewind = func() error {
+			if _, err := v.Seek(0, io.SeekStart); err != nil {
+				return err
+			}
+			return nil
+		}
+	default:
+		return nil, errors.New("cannot decode " + value.Type(arg0))
+	}
+
+	if rewind != nil {
+		if err := rewind(); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+	}
+
+	val, err := value.DecodeJSON(r)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+	return val, nil
+}
+
+func decode(cmd string, args []value.Value) (value.Value, error) {
+	name, err := value.ToName(args[0])
+
+	if err != nil {
+		return nil, err
+	}
+
+	subcmd, ok := decodetab[name.Value]
+
+	if !ok {
+		return nil, errors.New("undefined command: " + cmd + " " + name.Value)
+	}
+
+	subcmd.Name = cmd  + " " + name.Value
+
+	return subcmd.invoke(args[1:])
 }

@@ -2,6 +2,7 @@ package value
 
 import (
 	"bytes"
+	"encoding/json"
 	"sort"
 
 	"github.com/andrewpillar/req/syntax"
@@ -18,6 +19,10 @@ func ToObject(v Value) (Object, error) {
 		return Object{}, typeError(v.valueType(), objectType)
 	}
 	return o, nil
+}
+
+func (o Object) MarshalJSON() ([]byte, error) {
+	return json.Marshal(o.Pairs)
 }
 
 func (o Object) Has(v Value) bool {
