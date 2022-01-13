@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/andrewpillar/req/value"
@@ -500,6 +502,10 @@ var (
 			Argc: 1,
 			Func: encodeJson,
 		},
+		"url": &Command{
+			Argc: 1,
+			Func: encodeUrl,
+		},
 	}
 
 	DecodeCmd = &Command{
@@ -516,6 +522,10 @@ var (
 		"json": &Command{
 			Argc: 1,
 			Func: decodeJson,
+		},
+		"url": &Command{
+			Argc: 1,
+			Func: decodeUrl,
 		},
 	}
 )
@@ -554,6 +564,37 @@ func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 
 	return value.String{
 		Value: base64.StdEncoding.EncodeToString(src),
+	}, nil
+}
+
+func encodeUrl(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	obj, err := value.ToObject(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot encode " + value.Type(arg0)),
+		}
+	}
+
+	vals := make(url.Values)
+
+	for k, v := range obj.Pairs {
+		switch v.(type) {
+		case value.Int, value.Bool, value.String:
+			vals[k] = append(vals[k], v.Sprint())
+		default:
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: errors.New("key error " + k + ": cannot encode " + value.Type(v)),
+			}
+		}
+	}
+
+	return value.String{
+		Value: vals.Encode(),
 	}, nil
 }
 
@@ -677,6 +718,69 @@ func decodeJson(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 	return val, nil
+}
+
+func decodeUrl(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	str, err := value.ToString(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannnot decode " + value.Type(arg0)),
+		}
+	}
+
+	vals, err := url.ParseQuery(str.Value)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	obj := value.Object{
+		Pairs: make(map[string]value.Value),
+	}
+
+	booltab := map[string]bool{
+		"true":  true,
+		"false": false,
+	}
+
+	for k, items := range vals {
+		l := len(items)
+
+		vals := make([]value.Value, 0, l)
+
+		for _, it := range items {
+			if b, ok := booltab[it]; ok {
+				vals = append(vals, value.Bool{Value: b})
+				continue
+			}
+
+			if '0' >= it[0] && it[0] <= '9' {
+				i, err := strconv.ParseInt(it, 10, 64)
+
+				if err != nil {
+					vals = append(vals, value.Int{Value: i})
+					continue
+				}
+			}
+			vals = append(vals, value.String{Value: it})
+		}
+
+		if len(vals) > 1 {
+			arr := &value.Array{Items: vals}
+
+			obj.Pairs[k] = arr
+			continue
+		}
+		obj.Pairs[k] = vals[0]
+	}
+	return obj, nil
 }
 
 func decode(cmd string, args []value.Value) (value.Value, error) {
