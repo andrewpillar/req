@@ -160,16 +160,14 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-var (
-	// PrintCmd formats the given values using the Sprint method and writes it
-	// to standard output. If the final argument given is to a File, then the
-	// output is written to that file.
-	PrintCmd = &Command{
-		Name: "print",
-		Argc: -1,
-		Func: print(os.Stdout),
-	}
-)
+// PrintCmd formats the given values using the Sprint method and writes it to
+// standard output. If the final argument given is to a File, then the output
+// is written to that file.
+var PrintCmd = &Command{
+	Name: "print",
+	Argc: -1,
+	Func: print(os.Stdout),
+}
 
 func print(out io.Writer) CommandFunc {
 	return func(cmd string, args []value.Value) (value.Value, error) {
