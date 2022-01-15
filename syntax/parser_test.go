@@ -457,6 +457,65 @@ func Test_ParseRef(t *testing.T) {
 	}
 }
 
+func Test_ParseArray(t *testing.T) {
+	nn, err := ParseFile(filepath.Join("testdata", "array.req"), errh(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		&VarDecl{
+			Name: &Name{Value: "ObjArray"},
+			Value: &Array{
+				Items: []Node{
+					&Object{
+						Pairs: []*KeyExpr{
+							{
+								Key: &Name{Value: "N"},
+								Value: &Lit{
+									Type:  IntLit,
+									Value: "10",
+								},
+							},
+						},
+					},
+					&Object{
+						Pairs: []*KeyExpr{
+							{
+								Key: &Name{Value: "S"},
+								Value: &Lit{
+									Type:  StringLit,
+									Value: "S",
+								},
+							},
+						},
+					},
+					&Object{
+						Pairs: []*KeyExpr{
+							{
+								Key: &Name{Value: "T"},
+								Value: &Lit{
+									Type:  BoolLit,
+									Value: "true",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(nn) != len(expected) {
+		t.Fatalf("node count mismatch, expected=%d, got=%d\n", len(expected), len(nn))
+	}
+
+	for i, n := range nn {
+		checkNode(t, expected[i], n)
+	}
+}
+
 func Test_ParseIf(t *testing.T) {
 	nn, err := ParseFile(filepath.Join("testdata", "if.req"), errh(t))
 
@@ -693,17 +752,31 @@ func Test_Parser(t *testing.T) {
 						Type:  IntLit,
 						Value: "200",
 					},
-					Then: &CommandStmt{
-						Name: &Name{Value: "print"},
-						Args: []Node{
-							&Ref{
-								Left: &DotExpr{
-									Left:  &Name{Value: "Resp"},
-									Right: &Name{Value: "Body"},
+					Then: &BlockStmt{
+						Nodes: []Node{
+							&VarDecl{
+								Name: &Name{Value: "User"},
+								Value: &CommandStmt{
+									Name: &Name{Value: "decode"},
+									Args: []Node{
+										&Name{Value: "json"},
+										&Ref{
+											Left: &DotExpr{
+												Left:  &Name{Value: "Resp"},
+												Right: &Name{Value: "Body"},
+											},
+										},
+									},
 								},
 							},
-							&Ref{
-								Left: &Name{Value: "Stdout"},
+							&CommandStmt{
+								Name: &Name{Value: "print"},
+								Args: []Node{
+									&Lit{
+										Type:  StringLit,
+										Value: `Hello {$User["login"]}`,
+									},
+								},
 							},
 						},
 					},

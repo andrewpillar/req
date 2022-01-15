@@ -278,12 +278,7 @@ func (p *parser) arr() *Array {
 	}
 
 	p.list(_Comma, _Rbrack, func() {
-		if p.tok != _Literal {
-			p.expected(_Literal)
-			p.next()
-			return
-		}
-		n.Items = append(n.Items, p.literal())
+		n.Items = append(n.Items, p.operand())
 	})
 	return n
 }

@@ -17,7 +17,11 @@ Resp = GET "{$Endpoint}/user" {
 } -> send;
 
 match $Resp.StatusCode {
-	200 -> print $Resp.Body $Stdout;
+    200 -> {
+		User = decode json $Resp.Body;
+
+		print "Hello {$User["login"]}";
+	}
 	_   -> {
 		print $Resp.Body $Stderr;
 	}
