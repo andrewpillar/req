@@ -14,16 +14,17 @@ func _() {
 	_ = x[arrayType-4]
 	_ = x[objectType-5]
 	_ = x[fileType-6]
-	_ = x[requestType-7]
-	_ = x[responseType-8]
-	_ = x[streamType-9]
-	_ = x[nameType-10]
-	_ = x[zeroType-11]
+	_ = x[formDataType-7]
+	_ = x[requestType-8]
+	_ = x[responseType-9]
+	_ = x[streamType-10]
+	_ = x[nameType-11]
+	_ = x[zeroType-12]
 }
 
-const _valueType_name = "stringintboolarrayobjectfilerequestresponsestreamnamezero"
+const _valueType_name = "stringintboolarrayobjectfileform-datarequestresponsestreamnamezero"
 
-var _valueType_index = [...]uint8{0, 6, 9, 13, 18, 24, 28, 35, 43, 49, 53, 57}
+var _valueType_index = [...]uint8{0, 6, 9, 13, 18, 24, 28, 37, 44, 52, 58, 62, 66}
 
 func (i valueType) String() string {
 	i -= 1

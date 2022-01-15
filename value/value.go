@@ -18,6 +18,7 @@ const (
 	arrayType                         // array
 	objectType                        // object
 	fileType                          // file
+	formDataType                      // form-data
 	requestType                       // request
 	responseType                      // response
 	streamType                        // stream
@@ -37,7 +38,9 @@ func typeError(typ1, typ2 valueType) error {
 // Stream represents a stream of data that can be read. This would either be a
 // Request/Response body or a File.
 type Stream interface {
-	io.ReadSeeker
+	io.Reader
+	io.ReaderAt
+	io.Seeker
 	io.Closer
 }
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -602,8 +603,18 @@ func encodeFormData(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
-	return value.String{
-		Value: buf.String(),
+	if err := w.Close(); err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	data := bytes.NewReader(buf.Bytes())
+
+	return &value.FormData{
+		Data:        data,
+		ContentType: w.FormDataContentType(),
 	}, nil
 }
 
@@ -736,38 +747,60 @@ func decodeBase64(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-//TODO: implement decoding of form-data
+var maxFormMemory int64 = 64 << 20 // 64 MB
+
 func decodeFormData(cmd string, args []value.Value) (value.Value, error) {
 	arg0 := args[0]
 
-	var (
-		r      io.Reader
-		stream value.Stream
-	)
+	f, err := value.ToFormData(arg0)
 
-	switch v := arg0.(type) {
-	case value.String:
-		r = strings.NewReader(v.Value)
-	case value.Stream:
-		r = v
-		stream = v
-	default:
-		return nil, errors.New("cannot decode " + value.Type(arg0))
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot decode " + value.Type(arg0)),
+		}
 	}
+
+	_, params, err := mime.ParseMediaType(f.ContentType)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	r := multipart.NewReader(f.Data, params["boundary"])
 
 	obj := value.Object{
 		Pairs: make(map[string]value.Value),
 	}
 
-	io.Copy(io.Discard, r)
+	form, err := r.ReadForm(maxFormMemory)
 
-	if stream != nil {
-		if _, err := stream.Seek(0, io.SeekStart); err != nil {
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	for k, v := range form.Value {
+		obj.Pairs[k] = value.String{
+			Value: v[0],
+		}
+	}
+
+	for k, v := range form.File {
+		f, err := v[0].Open()
+
+		if err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
 			}
 		}
+		obj.Pairs[k] = value.NewStream(f)
 	}
 	return obj, nil
 }
