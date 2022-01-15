@@ -1,8 +1,8 @@
 package value
 
 import (
-	"io"
 	"encoding/json"
+	"io"
 )
 
 func decodeJson(a interface{}) Value {

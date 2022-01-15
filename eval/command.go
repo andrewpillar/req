@@ -496,19 +496,19 @@ var (
 	}
 
 	encodetab = map[string]*Command{
-		"base64": &Command{
+		"base64": {
 			Argc: 1,
 			Func: encodeBase64,
 		},
-		"form-data": &Command{
+		"form-data": {
 			Argc: 1,
 			Func: encodeFormData,
 		},
-		"json": &Command{
+		"json": {
 			Argc: 1,
 			Func: encodeJson,
 		},
-		"url": &Command{
+		"url": {
 			Argc: 1,
 			Func: encodeUrl,
 		},
@@ -689,7 +689,7 @@ func encode(cmd string, args []value.Value) (value.Value, error) {
 		return nil, errors.New("undefined command: " + cmd + " " + name.Value)
 	}
 
-	subcmd.Name = cmd  + " " + name.Value
+	subcmd.Name = cmd + " " + name.Value
 
 	return subcmd.invoke(args[1:])
 }
@@ -702,19 +702,19 @@ var (
 	}
 
 	decodetab = map[string]*Command{
-		"base64": &Command{
+		"base64": {
 			Argc: 1,
 			Func: decodeBase64,
 		},
-		"form-data": &Command{
+		"form-data": {
 			Argc: 1,
 			Func: decodeFormData,
 		},
-		"json": &Command{
+		"json": {
 			Argc: 1,
 			Func: decodeJson,
 		},
-		"url": &Command{
+		"url": {
 			Argc: 1,
 			Func: decodeUrl,
 		},
@@ -919,7 +919,7 @@ func decode(cmd string, args []value.Value) (value.Value, error) {
 		return nil, errors.New("undefined command: " + cmd + " " + name.Value)
 	}
 
-	subcmd.Name = cmd  + " " + name.Value
+	subcmd.Name = cmd + " " + name.Value
 
 	return subcmd.invoke(args[1:])
 }

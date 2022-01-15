@@ -92,7 +92,7 @@ func (o Object) Sprint() string {
 	end := len(o.Pairs) - 1
 
 	for i, k := range order {
-		buf.WriteString(k+":"+o.Pairs[k].Sprint())
+		buf.WriteString(k + ":" + o.Pairs[k].Sprint())
 
 		if i != end {
 			buf.WriteByte(' ')

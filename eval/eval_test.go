@@ -128,7 +128,7 @@ func Test_EvalInterpolate(t *testing.T) {
 			continue
 		}
 
-  		str, err := value.ToString(val)
+		str, err := value.ToString(val)
 
 		if err != nil {
 			t.Fatalf("tests[%d] - Eval.interpolate did not return a stringObj", i)
