@@ -1,0 +1,22 @@
+SGVsbG8gd29y
+{"A":[1,2,3],"I":10,"S":"string"}
+A=1&A=2&A=3&I=10&S=string
+--Test_Eval
+Content-Disposition: form-data; name="Name"
+
+encode.req
+--Test_Eval
+Content-Disposition: form-data; name="File"; filename="testdata/encode.req"
+Content-Type: application/octet-stream
+
+
+
+F = open "testdata/encode.req";
+
+encode base64 "Hello world" -> print;
+encode json {S: "string", I: 10, A: [1, 2, 3]} -> print;
+encode url {S: "string", I: 10, A: [1, 2, 3]} -> print;
+encode form-data {Name: "encode.req", File: $F} -> print;
+
+--Test_Eval--
+

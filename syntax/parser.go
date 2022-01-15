@@ -259,12 +259,12 @@ func (p *parser) obj() *Object {
 
 		p.want(_Colon)
 
-		val := p.operand()
+		//		val := p.operand()
 
 		n.Pairs = append(n.Pairs, &KeyExpr{
 			node:  p.node(),
 			Key:   key,
-			Value: val,
+			Value: p.binexpr(0),
 		})
 	})
 	return n

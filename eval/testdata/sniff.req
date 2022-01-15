@@ -1,0 +1,5 @@
+
+
+F = open "testdata/avatar.base64";
+
+decode base64 $F -> sniff -> print;

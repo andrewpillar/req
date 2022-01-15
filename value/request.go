@@ -44,7 +44,7 @@ func (r Request) Select(val Value) (Value, error) {
 		return Object{Pairs: pairs}, nil
 	case "Body":
 		if r.Body == nil {
-			return &memStream{}, nil
+			return &stream{}, nil
 		}
 
 		rc, rc2 := copyrc(r.Body)
@@ -52,9 +52,7 @@ func (r Request) Select(val Value) (Value, error) {
 
 		b, _ := io.ReadAll(rc2)
 
-		return &memStream{
-			SectionReader: io.NewSectionReader(bytes.NewReader(b), 0, int64(len(b))),
-		}, nil
+		return NewStream(BufferStream(bytes.NewReader(b))), nil
 	default:
 		return nil, errors.New("type " + val.valueType().String() + " has no field " + name.Value)
 	}
@@ -72,6 +70,10 @@ func copyrc(rc io.ReadCloser) (io.ReadCloser, io.ReadCloser) {
 }
 
 func (r Request) Sprint() string {
+	if r.Request == nil {
+		return ""
+	}
+
 	buf := bytes.NewBufferString(r.Method + " " + r.Proto + "\n")
 
 	r.Header.Write(buf)

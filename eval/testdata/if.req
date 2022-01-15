@@ -1,0 +1,41 @@
+
+
+if true {
+	print "true";
+}
+
+if true and false {
+	print "true and false";
+}
+
+if true != false {
+	print "true != false";
+}
+
+if 10 == 11 or true {
+	print "10 == 11 or true";
+}
+
+if 10 < 20 {
+	print "10 < 20";
+}
+
+if 10 > 20 {
+	print "10 > 20";
+}
+
+if 10 == 10 or "10" == "10" {
+	print "10 == 10 or '10' == '10'";
+}
+
+if [] == [] {
+	print "[] == []";
+}
+
+if [1, 2, 3, 4] == ["one", "two", "three", "four"] {
+	print "[1, 2, 3, 4] == ['one', 'two', 'three', 'four']";
+}
+
+if [1, 2, 3, 4] == [1, 2, 3, 4] {
+	print "[1, 2, 3, 4] == [1, 2, 3, 4]";
+}

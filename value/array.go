@@ -145,6 +145,11 @@ func (a *Array) cmp(op syntax.Op, b Value) (Value, error) {
 			break
 		}
 
+		if len(a.Items) == 0 && len(other.Items) == 0 {
+			ans = true
+			break
+		}
+
 		for i, it := range a.Items {
 			val, err := it.cmp(op, other.Items[i])
 

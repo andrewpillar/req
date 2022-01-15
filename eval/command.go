@@ -160,58 +160,61 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-// PrintCmd is for the "print" command that allows for printing to a file or
-// to stdout. This takes an unlimited number of arguments. If the final argument
-// is a file, then the output is written to that file. This returns nothing.
-var PrintCmd = &Command{
-	Name: "print",
-	Argc: -1,
-	Func: print_,
-}
+var (
+	// PrintCmd formats the given values using the Sprint method and writes it
+	// to standard output. If the final argument given is to a File, then the
+	// output is written to that file.
+	PrintCmd = &Command{
+		Name: "print",
+		Argc: -1,
+		Func: print(os.Stdout),
+	}
+)
 
-func print_(cmd string, args []value.Value) (value.Value, error) {
-	if len(args) < 1 {
-		return nil, &CommandError{
-			Op:  "call",
-			Cmd: cmd,
-			Err: errNotEnoughArgs,
+func print(out io.Writer) CommandFunc {
+	return func(cmd string, args []value.Value) (value.Value, error) {
+		if len(args) < 1 {
+			return nil, &CommandError{
+				Op:  "call",
+				Cmd: cmd,
+				Err: errNotEnoughArgs,
+			}
 		}
-	}
 
-	out := os.Stdout
+		end := len(args) - 1
+		last := args[end]
 
-	end := len(args) - 1
-	last := args[end]
+		if f, ok := last.(value.File); ok {
+			out = f.File
+			args = args[:end]
+			end--
+		}
 
-	if f, ok := last.(value.File); ok {
-		out = f.File
-		args = args[:end]
-	}
+		var buf bytes.Buffer
 
-	var buf bytes.Buffer
+		for i, arg := range args {
+			if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
 
-	for i, arg := range args {
-		if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {
+			if i != end {
+				buf.WriteByte(' ')
+			}
+		}
+
+		buf.WriteByte('\n')
+
+		if _, err := fmt.Fprint(out, buf.String()); err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
 			}
 		}
-
-		if i != end {
-			buf.WriteByte(' ')
-		}
+		return nil, nil
 	}
-
-	buf.WriteByte('\n')
-
-	if _, err := fmt.Fprint(out, buf.String()); err != nil {
-		return nil, &CommandError{
-			Cmd: cmd,
-			Err: err,
-		}
-	}
-	return nil, nil
 }
 
 var (
@@ -377,8 +380,8 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 			arg2 := args[2]
 
 			switch v := arg2.(type) {
-			case value.String, *value.Array, value.Object:
-				body = strings.NewReader(arg2.Sprint())
+			case value.String:
+				body = strings.NewReader(v.Sprint())
 			case value.File:
 				body = v.File
 			default:
@@ -502,7 +505,7 @@ var (
 		},
 		"form-data": {
 			Argc: 1,
-			Func: encodeFormData,
+			Func: encodeFormData(""),
 		},
 		"json": {
 			Argc: 1,
@@ -518,15 +521,13 @@ var (
 func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 	arg0 := args[0]
 
-	var src []byte
+	var src bytes.Buffer
 
 	switch v := arg0.(type) {
 	case value.String:
-		src = []byte(v.Value)
+		src.WriteString(v.Value)
 	case value.Stream:
-		b, err := io.ReadAll(v)
-
-		if err != nil {
+		if _, err := io.Copy(&src, v); err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
@@ -539,25 +540,7 @@ func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 				Err: err,
 			}
 		}
-		src = b
 	default:
-		return nil, &CommandError{
-			Cmd: cmd,
-			Err: errors.New("cannot encode " + value.Type(arg0)),
-		}
-	}
-
-	return value.String{
-		Value: base64.StdEncoding.EncodeToString(src),
-	}, nil
-}
-
-func encodeFormData(cmd string, args []value.Value) (value.Value, error) {
-	arg0 := args[0]
-
-	obj, err := value.ToObject(arg0)
-
-	if err != nil {
 		return nil, &CommandError{
 			Cmd: cmd,
 			Err: errors.New("cannot encode " + value.Type(arg0)),
@@ -566,56 +549,90 @@ func encodeFormData(cmd string, args []value.Value) (value.Value, error) {
 
 	var buf bytes.Buffer
 
-	w := multipart.NewWriter(&buf)
+	enc := base64.NewEncoder(base64.StdEncoding, &buf)
 
-	for k, v := range obj.Pairs {
-		switch v2 := v.(type) {
-		case value.String, value.Int, value.Bool:
-			w.WriteField(k, v.Sprint())
-		case value.File:
-			sw, err := w.CreateFormFile(k, v2.Name())
-
-			if err != nil {
-				return nil, &CommandError{
-					Cmd: cmd,
-					Err: err,
-				}
-			}
-
-			if _, err := io.Copy(sw, v2); err != nil {
-				return nil, &CommandError{
-					Cmd: cmd,
-					Err: err,
-				}
-			}
-
-			if _, err := v2.Seek(0, io.SeekStart); err != nil {
-				return nil, &CommandError{
-					Cmd: cmd,
-					Err: err,
-				}
-			}
-		default:
-			return nil, &CommandError{
-				Cmd: cmd,
-				Err: errors.New("key error " + k + ": cannot encode " + value.Type(v)),
-			}
-		}
-	}
-
-	if err := w.Close(); err != nil {
+	if _, err := io.Copy(enc, &src); err != nil {
 		return nil, &CommandError{
 			Cmd: cmd,
 			Err: err,
 		}
 	}
 
-	data := bytes.NewReader(buf.Bytes())
-
-	return &value.FormData{
-		Data:        data,
-		ContentType: w.FormDataContentType(),
+	return value.String{
+		Value: buf.String(),
 	}, nil
+}
+
+func encodeFormData(boundary string) CommandFunc {
+	return func(cmd string, args []value.Value) (value.Value, error) {
+		arg0 := args[0]
+
+		obj, err := value.ToObject(arg0)
+
+		if err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: errors.New("cannot encode " + value.Type(arg0)),
+			}
+		}
+
+		var buf bytes.Buffer
+
+		w := multipart.NewWriter(&buf)
+
+		if boundary != "" {
+			w.SetBoundary(boundary)
+		}
+
+		for k, v := range obj.Pairs {
+			switch v2 := v.(type) {
+			case value.String, value.Int, value.Bool:
+				w.WriteField(k, v.Sprint())
+			case value.File:
+				sw, err := w.CreateFormFile(k, v2.Name())
+
+				if err != nil {
+					return nil, &CommandError{
+						Cmd: cmd,
+						Err: err,
+					}
+				}
+
+				if _, err := io.Copy(sw, v2); err != nil {
+					return nil, &CommandError{
+						Cmd: cmd,
+						Err: err,
+					}
+				}
+
+				if _, err := v2.Seek(0, io.SeekStart); err != nil {
+					return nil, &CommandError{
+						Cmd: cmd,
+						Err: err,
+					}
+				}
+			default:
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: errors.New("key error " + k + ": cannot encode " + value.Type(v)),
+				}
+			}
+		}
+
+		if err := w.Close(); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+
+		data := bytes.NewReader(buf.Bytes())
+
+		return &value.FormData{
+			Data:        data,
+			ContentType: w.FormDataContentType(),
+		}, nil
+	}
 }
 
 func encodeUrl(cmd string, args []value.Value) (value.Value, error) {
@@ -633,9 +650,13 @@ func encodeUrl(cmd string, args []value.Value) (value.Value, error) {
 	vals := make(url.Values)
 
 	for k, v := range obj.Pairs {
-		switch v.(type) {
+		switch v := v.(type) {
 		case value.Int, value.Bool, value.String:
 			vals[k] = append(vals[k], v.Sprint())
+		case *value.Array:
+			for _, it := range v.Items {
+				vals[k] = append(vals[k], it.Sprint())
+			}
 		default:
 			return nil, &CommandError{
 				Cmd: cmd,
@@ -724,16 +745,23 @@ var (
 func decodeBase64(cmd string, args []value.Value) (value.Value, error) {
 	arg0 := args[0]
 
-	str, err := value.ToString(arg0)
+	var r io.Reader
 
-	if err != nil {
+	switch v := arg0.(type) {
+	case value.String:
+		r = strings.NewReader(v.Value)
+	case value.Stream:
+		r = v
+	default:
 		return nil, &CommandError{
 			Cmd: cmd,
 			Err: errors.New("cannot decode " + value.Type(arg0)),
 		}
 	}
 
-	b, err := base64.StdEncoding.DecodeString(str.Value)
+	dec := base64.NewDecoder(base64.StdEncoding, r)
+
+	b, err := io.ReadAll(dec)
 
 	if err != nil {
 		return nil, &CommandError{
@@ -741,10 +769,7 @@ func decodeBase64(cmd string, args []value.Value) (value.Value, error) {
 			Err: err,
 		}
 	}
-
-	return value.String{
-		Value: string(b),
-	}, nil
+	return value.NewStream(value.BufferStream(bytes.NewReader(b))), nil
 }
 
 var maxFormMemory int64 = 64 << 20 // 64 MB

@@ -1,0 +1,9 @@
+
+Array = [1, 2, 3, 4];
+Obj = {
+	Key: "value",
+};
+
+Resp = GET "__endpoint__" -> send;
+
+print $Array[0] $Array[4] $Obj["Key"] $Obj["foo"] $Resp.StatusCode;

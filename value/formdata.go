@@ -28,6 +28,10 @@ func (f *FormData) String() string {
 }
 
 func (f *FormData) Sprint() string {
+	if f.Data == nil {
+		return ""
+	}
+
 	b, err := io.ReadAll(f.Data)
 
 	if err != nil {
@@ -51,9 +55,7 @@ func (f *FormData) Select(val Value) (Value, error) {
 			Value: f.ContentType,
 		}, nil
 	case "Data":
-		return &memStream{
-			SectionReader: io.NewSectionReader(f.Data, 0, int64(f.Data.Len())),
-		}, nil
+		return NewStream(BufferStream(f.Data)), nil
 	default:
 		return nil, errors.New("type " + val.valueType().String() + " has no field " + name.Value)
 	}

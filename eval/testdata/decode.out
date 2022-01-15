@@ -1,0 +1,8 @@
+{A:[1 2 3] I:10 S:string}
+{A:[1 2 3] I:10 S:string}
+{File:{
+	"A": [1, 2, 3],
+	"I": 10,
+	"S": "string"
+}
+ Name:payload.json}

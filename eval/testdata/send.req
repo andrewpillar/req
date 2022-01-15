@@ -1,0 +1,13 @@
+
+
+JSON = encode json {
+	A: [1, 2, 3],
+	S: "string",
+	I: 10,
+};
+
+Resp = POST "__endpoint__" {
+	Content-Type: "application/json",
+} $JSON -> send;
+
+print $Resp.StatusCode;

@@ -12,6 +12,15 @@ type File struct {
 	*os.File
 }
 
+func ToFile(v Value) (File, error) {
+	f, ok := v.(File)
+
+	if !ok {
+		return File{}, typeError(v.valueType(), fileType)
+	}
+	return f, nil
+}
+
 func (f File) Read(p []byte) (int, error) {
 	if f.File == nil {
 		return 0, nil

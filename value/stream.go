@@ -1,6 +1,7 @@
 package value
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -8,17 +9,21 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
-var errStreamClosed = errors.New("stream closed")
-
-type baseStream struct {
-	closed bool
+type stream struct {
+	Stream
 }
 
-func stringStream(s Stream) string {
-	return fmt.Sprintf("Stream<addr=%p>", s)
+func NewStream(s Stream) Value {
+	return &stream{
+		Stream: s,
+	}
 }
 
-func sprintStream(s Stream) string {
+func (s stream) String() string {
+	return fmt.Sprintf("Stream<addr=%p>", s.Stream)
+}
+
+func (s stream) Sprint() string {
 	b, err := io.ReadAll(s)
 
 	if err != nil {
@@ -29,80 +34,31 @@ func sprintStream(s Stream) string {
 	return string(b)
 }
 
-func (s *baseStream) valueType() valueType {
+func (s stream) valueType() valueType {
 	return streamType
 }
 
-func (s *baseStream) cmp(op syntax.Op, _ Value) (Value, error) {
+func (s stream) cmp(op syntax.Op, _ Value) (Value, error) {
 	return nil, opError(op, streamType)
 }
 
-func (s *baseStream) Close() error {
-	if s.closed {
-		return errStreamClosed
-	}
-	s.closed = true
-	return nil
-}
-
-type memStream struct {
-	baseStream
+type sectionReadCloser struct {
 	*io.SectionReader
+	closed bool
 }
 
-func (m *memStream) String() string {
-	return stringStream(m)
-}
+var errClosed = errors.New("stream closed")
 
-func (m *memStream) Sprint() string {
-	return sprintStream(m)
-}
-
-func (m *memStream) Read(p []byte) (int, error) {
-	if m.closed {
-		return 0, errStreamClosed
+func BufferStream(r *bytes.Reader) Stream {
+	return &sectionReadCloser{
+		SectionReader: io.NewSectionReader(r, 0, int64(r.Len())),
 	}
-	return m.SectionReader.Read(p)
 }
 
-func (m *memStream) ReadAt(p []byte, off int64) (int, error) {
-	if m.closed {
-		return 0, errStreamClosed
+func (r *sectionReadCloser) Close() error {
+	if r.closed {
+		return errClosed
 	}
-	return m.SectionReader.ReadAt(p, off)
-}
-
-func (m *memStream) Seek(offset int64, whence int) (int64, error) {
-	if m.closed {
-		return 0, errStreamClosed
-	}
-	return m.SectionReader.Seek(offset, whence)
-}
-
-func (m *memStream) Close() error {
-	return m.baseStream.Close()
-}
-
-type valStream struct {
-	baseStream
-	Stream
-}
-
-func NewStream(s Stream) Value {
-	if v, ok := s.(Value); ok {
-		return v
-	}
-	return &valStream{Stream: s}
-}
-
-func (s *valStream) String() string {
-	return stringStream(s.Stream)
-}
-
-func (s *valStream) Sprint() string {
-	return sprintStream(s.Stream)
-}
-
-func (s *valStream) Close() error {
-	return s.baseStream.Close()
+	r.closed = false
+	return nil
 }

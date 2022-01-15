@@ -1,9 +1,11 @@
 
 
-Resp = GET "__endpoint__" -> send;
+StatusCode = 200;
 
-match $Resp.StatusCode {
-	200 -> {
-		print "200 OK";
-	}
+match $StatusCode {
+	200 -> print $StatusCode;
+}
+
+match false {
+	_ -> print "default";
 }

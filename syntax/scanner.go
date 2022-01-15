@@ -200,6 +200,7 @@ redo:
 			break
 		}
 		sc.unget()
+		sc.tok = _Op
 		sc.op, sc.prec = GtOp, precCmp
 	case '$':
 		sc.tok = _Ref
