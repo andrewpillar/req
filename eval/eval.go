@@ -119,7 +119,6 @@ func (e *Evaluator) interpolate(c *Context, litpos syntax.Pos, s string) (value.
 	interpolate := false
 	expr := make([]rune, 0, len(s))
 
-
 	pos := litpos
 
 	for i, r := range s {
