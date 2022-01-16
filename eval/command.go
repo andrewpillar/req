@@ -159,6 +159,75 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
+// ReadCmd implements the read command for reading a single line from the
+// given stream.
+var ReadCmd = &Command{
+	Name: "read",
+	Argc: 1,
+	Func: read,
+}
+
+func read(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	s, err := value.ToStream(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	// Get current offset so we can rewind back in the stream to where the
+	// newline actuall occurred.
+	off, err := s.Seek(0, io.SeekCurrent)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	buf := make([]byte, 4096)
+
+	n, err := s.Read(buf)
+
+	if err != nil {
+		if !errors.Is(err, io.EOF) {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+	}
+
+	pos := 0
+
+	for i, b := range buf[:n] {
+		if b == '\n' {
+			pos = i
+			break
+		}
+	}
+
+	line := string(buf[:pos])
+
+	off, err = s.Seek(int64(pos + 1) + off, io.SeekStart)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	return value.String{
+		Value: line,
+	}, nil
+}
+
 // PrintCmd implements the print command for formatting the given arguments
 // using Sprint and writing it to standard output. If the final argument is
 // a file, then the output is written to that file. Each argument is space
@@ -182,10 +251,12 @@ func print(out io.Writer) CommandFunc {
 		end := len(args) - 1
 		last := args[end]
 
-		if f, ok := last.(value.File); ok {
-			out = f.File
-			args = args[:end]
-			end--
+		if len(args) > 1 {
+			if f, ok := last.(value.File); ok {
+				out = f.File
+				args = args[:end]
+				end--
+			}
 		}
 
 		var buf bytes.Buffer

@@ -1,0 +1,10 @@
+
+
+F = open "testdata/read.req";
+
+read $F;
+read $F;
+read $F -> print;
+read $F;
+read $F -> print;
+read $F -> print;

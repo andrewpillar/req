@@ -25,6 +25,8 @@ func (s stream) String() string {
 }
 
 func (s stream) Sprint() string {
+	s.Seek(0, io.SeekStart)
+
 	b, err := io.ReadAll(s)
 
 	if err != nil {

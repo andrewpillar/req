@@ -1,0 +1,3 @@
+F = open "testdata/read.req";
+read $F;
+read $F;
