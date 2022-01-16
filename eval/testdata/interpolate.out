@@ -1,0 +1,3 @@
+Status = 200 OK, Code = 200
+Arr[0] = 1
+Obj['S'] = string
