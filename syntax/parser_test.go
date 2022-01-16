@@ -192,16 +192,6 @@ func checkMatchStmt(t *testing.T, expected, actual *MatchStmt) {
 	}
 }
 
-func checkYieldStmt(t *testing.T, expected, actual *YieldStmt) {
-	if expected.Value != nil {
-		if actual.Value == nil {
-			t.Errorf("%s - expected Value for YieldStmt\n", actual.Pos())
-			return
-		}
-		checkNode(t, expected.Value, actual.Value)
-	}
-}
-
 func checkOperation(t *testing.T, expected, actual *Operation) {
 	if expected.Op != actual.Op {
 		t.Errorf("%s - unexpected Operation.Op, expected=%q, got=%q\n", actual.Pos(), expected.Op, actual.Op)
@@ -357,14 +347,6 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkMatchStmt(t, v, match)
-	case *YieldStmt:
-		yield, ok := actual.(*YieldStmt)
-
-		if !ok {
-			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
-			return
-		}
-		checkYieldStmt(t, v, yield)
 	case *Operation:
 		op, ok := actual.(*Operation)
 

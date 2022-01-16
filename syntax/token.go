@@ -71,7 +71,6 @@ const (
 	_Comma  // ,
 	_Colon  // :
 	_Dot    // .
-	_DotDot // ..
 	_Arrow  // ->
 	_Assign // =
 	_Ref    // $

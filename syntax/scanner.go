@@ -155,11 +155,6 @@ redo:
 	case ':':
 		sc.tok = _Colon
 	case '.':
-		if sc.get() == '.' {
-			sc.tok = _DotDot
-			break
-		}
-		sc.unget()
 		sc.tok = _Dot
 	case '{':
 		sc.tok = _Lbrace
