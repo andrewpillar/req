@@ -228,9 +228,45 @@ func read(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
+func doPrint(out io.Writer, cmd string, args []value.Value) (value.Value, error) {
+	if len(args) < 1 {
+		return nil, &CommandError{
+			Op:  "call",
+			Cmd: cmd,
+			Err: errNotEnoughArgs,
+		}
+	}
+
+	var buf bytes.Buffer
+
+	end := len(args)-1
+
+	for i, arg := range args {
+		if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+
+		if i != end {
+			buf.WriteByte(' ')
+		}
+	}
+
+	buf.WriteByte('\n')
+
+	if _, err := fmt.Fprint(out, buf.String()); err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+	return nil, nil
+}
+
 // PrintCmd implements the print command for formatting the given arguments
-// using Sprint and writing it to standard output. If the final argument is
-// a file, then the output is written to that file. Each argument is space
+// using Sprint and writing them to standard output. Each argument is space
 // separated, and a terminating newline is written.
 var PrintCmd = &Command{
 	Name: "print",
@@ -240,50 +276,32 @@ var PrintCmd = &Command{
 
 func print(out io.Writer) CommandFunc {
 	return func(cmd string, args []value.Value) (value.Value, error) {
-		if len(args) < 1 {
-			return nil, &CommandError{
-				Op:  "call",
-				Cmd: cmd,
-				Err: errNotEnoughArgs,
-			}
-		}
-
-		end := len(args) - 1
-		last := args[end]
-
-		if len(args) > 1 {
-			if f, ok := last.(value.File); ok {
-				out = f.File
-				args = args[:end]
-				end--
-			}
-		}
-
-		var buf bytes.Buffer
-
-		for i, arg := range args {
-			if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {
-				return nil, &CommandError{
-					Cmd: cmd,
-					Err: err,
-				}
-			}
-
-			if i != end {
-				buf.WriteByte(' ')
-			}
-		}
-
-		buf.WriteByte('\n')
-
-		if _, err := fmt.Fprint(out, buf.String()); err != nil {
-			return nil, &CommandError{
-				Cmd: cmd,
-				Err: err,
-			}
-		}
-		return nil, nil
+		return doPrint(out, cmd, args)
 	}
+}
+
+// FprintCmd implements the fprint command for formatting the given arguments
+// using Sprint and writing them to a given file. The first argument to this
+// command must be a file. Each argument is space separated, and a terminating
+// newline is written.
+var FprintCmd = &Command{
+	Name: "fprint",
+	Argc: -1,
+	Func: fprint,
+}
+
+func fprint(cmd string, args []value.Value) (value.Value, error) {
+	arg0 := args[0]
+
+	f, err := value.ToFile(arg0)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+	return doPrint(f.File, cmd, args[1:])
 }
 
 // HeadCmd, OptionsCmd, GetCmd, PostCmd, PatchCmd, PutCmd, DeleteCmd, are the

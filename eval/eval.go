@@ -81,6 +81,7 @@ var builtinCmds = []*Command{
 	ExitCmd,
 	OpenCmd,
 	ReadCmd,
+	FprintCmd,
 	PrintCmd,
 	HeadCmd,
 	OptionsCmd,

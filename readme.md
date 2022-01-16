@@ -5,14 +5,13 @@ req is an HTTP scripting language.
 Below is an example that calls out to the GitHub API and displays the user
 making the call,
 
-    Stdout = open "/dev/stdout";
     Stderr = open "/dev/stderr";
 
     Endpoint = "https://api.github.com";
     Token = env "GH_TOKEN";
 
     if $Token == "" {
-        print "GH_TOKEN not set" $Stderr;
+        fprint $Stderr "GH_TOKEN not set";
         exit 1;
     }
 
@@ -29,7 +28,7 @@ making the call,
             print "Hello {$User["login"]}";
         }
         _   -> {
-            print "Unexpected response:" $Resp.Status $Stderr;
+            fprint $Stderr "Unexpected response:" $Resp.Status;
             exit 1;
         }
     }
