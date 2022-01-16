@@ -83,3 +83,45 @@ func Test_Eval(t *testing.T) {
 		buf.Reset()
 	}
 }
+
+func Test_EvalErrors(t *testing.T) {
+	tests := []struct {
+		expr string
+		pos  syntax.Pos
+	}{
+		{`encode base64 "Hello world" -> command;`, syntax.Pos{Line: 1, Col: 32}},
+		{`if "10" == 10 { }`, syntax.Pos{Line: 1, Col: 9}},
+		{`Arr = []; print $Arr[true];`, syntax.Pos{Line: 1, Col: 21}},
+		{`Arr = []; print $Arr["true"];`, syntax.Pos{Line: 1, Col: 21}},
+		{`Arr = []; print "{$Arr["true"]}";`, syntax.Pos{Line: 1, Col: 18}},
+		{`print $Undefined;`, syntax.Pos{Line: 1, Col: 8}},
+		{`print "Hello {$Undefined}";`, syntax.Pos{Line: 1, Col: 14}},
+		{`print "Hello {Undefined}";`, syntax.Pos{Line: 1, Col: 14}},
+	}
+
+	for i, test := range tests {
+		nn, err := syntax.Parse("-", strings.NewReader(test.expr), errh(t))
+
+		if err != nil {
+			t.Fatalf("tests[%d] - %s\n", i, err)
+		}
+
+		e := New()
+
+		err = e.Run(nn)
+
+		if err == nil {
+			t.Fatalf("tests[%d] - expected evaluation of %q to error\n", i, test.expr)
+		}
+
+		evalerr, ok := err.(Error)
+
+		if !ok {
+			t.Fatalf("tests[%d] - unexpected error type, expected=%T, got=%T(%q)\n", i, Error{}, err, err)
+		}
+
+		if test.pos.Line != evalerr.Pos.Line || test.pos.Col != evalerr.Pos.Col {
+			t.Fatalf("tests[%d] - unexpected error position, expected=%q, got=%q\n", i, test.pos, evalerr.Pos)
+		}
+	}
+}

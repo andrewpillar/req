@@ -113,15 +113,19 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 
 // interpolate parses the given string for {$Ref}, {$Ref.Dot}, and {$Ref[Ind]}
 // expressions and interpolates any that are found using the given Context.
-func (e *Evaluator) interpolate(c *Context, s string) (value.Value, error) {
+func (e *Evaluator) interpolate(c *Context, litpos syntax.Pos, s string) (value.Value, error) {
 	var buf bytes.Buffer
 
 	interpolate := false
 	expr := make([]rune, 0, len(s))
 
-	for _, r := range s {
+
+	pos := litpos
+
+	for i, r := range s {
 		if r == '{' {
 			interpolate = true
+			pos.Col += i + 1
 			continue
 		}
 
@@ -131,17 +135,24 @@ func (e *Evaluator) interpolate(c *Context, s string) (value.Value, error) {
 			n, err := syntax.ParseRef(string(expr))
 
 			if err != nil {
-				return nil, err
+				return nil, Error{
+					Pos: pos,
+					Err: err,
+				}
 			}
 
 			val, err := e.Eval(c, n)
 
 			if err != nil {
-				return nil, err
+				return nil, Error{
+					Pos: pos,
+					Err: errors.Unwrap(err),
+				}
 			}
 
 			buf.WriteString(val.Sprint())
 			expr = expr[0:0]
+			pos.Col = 0
 			continue
 		}
 
@@ -330,16 +341,10 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 	case *syntax.Lit:
 		switch v.Type {
 		case syntax.StringLit:
-			val, err := e.interpolate(c, v.Value)
+			val, err := e.interpolate(c, v.Pos(), v.Value)
 
 			if err != nil {
-				// Offset original position of string so we report the position
-				// in the Evaluated expression.
-				Evalerr := err.(Error)
-				pos := v.Pos()
-				pos.Col += Evalerr.Pos.Col + 1
-
-				return nil, e.err(pos, Evalerr.Err)
+				return nil, err
 			}
 			return val, err
 		case syntax.IntLit:
@@ -461,7 +466,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			cmd, args, err := e.resolveCommand(c, n)
 
 			if err != nil {
-				return nil, err
+				return nil, e.err(n.Pos(), err)
 			}
 
 			if val != nil {
