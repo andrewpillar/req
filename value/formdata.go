@@ -9,11 +9,15 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// FormData is the value for data encoded as multipart/form-data. This holds
+// the Content-Type of the data, which would be set in a request header, and the
+// data itself.
 type FormData struct {
 	ContentType string
 	Data        *bytes.Reader
 }
 
+// ToFormData attempts to type assert the given value to FormData.
 func ToFormData(v Value) (*FormData, error) {
 	f, ok := v.(*FormData)
 
@@ -23,10 +27,13 @@ func ToFormData(v Value) (*FormData, error) {
 	return f, nil
 }
 
+// String formats the FormData value to a string. The formatted string will
+// contain the pointer at which FormData exists.
 func (f *FormData) String() string {
 	return fmt.Sprintf("FormData<addr=%p>", f)
 }
 
+// Sprint returns the verbatim string representation of the FormData.
 func (f *FormData) Sprint() string {
 	if f.Data == nil {
 		return ""
@@ -42,6 +49,7 @@ func (f *FormData) Sprint() string {
 	return string(b)
 }
 
+// Select will return the value of the field with the given name.
 func (f *FormData) Select(val Value) (Value, error) {
 	name, err := ToName(val)
 

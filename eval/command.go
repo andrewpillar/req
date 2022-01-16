@@ -74,9 +74,7 @@ func (c Command) invoke(args []value.Value) (value.Value, error) {
 	return c.Func(c.Name, args)
 }
 
-// EnvCmd is for the "env" command that allows for retrieving environment
-// variables. This takes a single argument that is the name of the variable.
-// This returns a string for the environment variable.
+// EnvCommand implements the env command for retrieving environment variables.
 var EnvCmd = &Command{
 	Name: "env",
 	Argc: 1,
@@ -98,8 +96,8 @@ func env(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-// ExitCmd is for the "exit" command that allows for exiting a script. This
-// takes a single argument which is the exit code to use.
+// ExitCmd implements the exit command that will cause the current script to
+// exit with the given status code.
 var ExitCmd = &Command{
 	Name: "exit",
 	Argc: 1,
@@ -120,9 +118,10 @@ func exit(cmd string, args []value.Value) (value.Value, error) {
 	return nil, nil
 }
 
-// OpenCmd is for the "open" command that allows for opening a file. This takes
-// a single argument which is the path of the file to open. This returns a
-// handle to that file.
+// OpenCmd implements the open command for file reading. This will open the file
+// for reading and writing. If the given file does not exist then one is
+// created. All directories in the path to the file will be created if they
+// do not already exist.
 var OpenCmd = &Command{
 	Name: "open",
 	Argc: 1,
@@ -160,9 +159,10 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-// PrintCmd formats the given values using the Sprint method and writes it to
-// standard output. If the final argument given is to a File, then the output
-// is written to that file.
+// PrintCmd implements the print command for formatting the given arguments
+// using Sprint and writing it to standard output. If the final argument is
+// a file, then the output is written to that file. Each argument is space
+// separated, and a terminating newline is written.
 var PrintCmd = &Command{
 	Name: "print",
 	Argc: -1,
@@ -215,6 +215,10 @@ func print(out io.Writer) CommandFunc {
 	}
 }
 
+// HeadCmd, OptionsCmd, GetCmd, PostCmd, PatchCmd, PutCmd, DeleteCmd, are the
+// request family of commands for those respective methods. Each of these will
+// take at most 3 arguments for building the request, the first being the
+// endpoint, the second the header, and the third the request body.
 var (
 	HeadCmd = &Command{
 		Name: "HEAD",
@@ -418,6 +422,7 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
+// SendCmd implements the send command for sending a request.
 var SendCmd = &Command{
 	Name: "send",
 	Argc: 1,
@@ -450,8 +455,8 @@ func send(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-// SniffCmd is for the "sniff" command that allows for inspecting the mime type
-// of a stream. This takes a single argument, and returns a string.
+// SnifCmd implements the sniff command for inspecting the content type of a
+// stream.
 var SniffCmd = &Command{
 	Name: "sniff",
 	Argc: 1,
@@ -489,6 +494,9 @@ func sniff(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
+// EncodeCmd implements the encode family of commands for encoding data into
+// various forms. Each encode command has a respective decode command for
+// decoding data back into its original form.
 var (
 	EncodeCmd = &Command{
 		Name: "encode",
@@ -713,6 +721,9 @@ func encode(cmd string, args []value.Value) (value.Value, error) {
 	return subcmd.invoke(args[1:])
 }
 
+// DecodeCmd implements the decode family of commands for decoding data back to
+// their original form. Each decode command has a respective encode command for
+// encoding data into a different form.
 var (
 	DecodeCmd = &Command{
 		Name: "decode",

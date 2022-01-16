@@ -1,3 +1,4 @@
+// Package value provides the value types that req uses during evaluation.
 package value
 
 import (
@@ -44,6 +45,7 @@ type Stream interface {
 	io.Closer
 }
 
+// ToStream attempts to assert the given Value to a Stream.
 func ToStream(v Value) (Stream, error) {
 	s, ok := v.(Stream)
 
@@ -77,6 +79,7 @@ type Index interface {
 	Get(Value) (Value, error)
 }
 
+// ToIndex attemps to assert the given Value to an Index.
 func ToIndex(v Value) (Index, error) {
 	i, ok := v.(Index)
 
@@ -86,10 +89,12 @@ func ToIndex(v Value) (Index, error) {
 	return i, nil
 }
 
+// Selector represents a Value that has fields that can be access via a dot.
 type Selector interface {
 	Select(Value) (Value, error)
 }
 
+// ToSelector attempts to assert the given Value to a Selector.
 func ToSelector(v Value) (Selector, error) {
 	s, ok := v.(Selector)
 

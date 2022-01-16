@@ -2,10 +2,13 @@ package value
 
 import "github.com/andrewpillar/req/syntax"
 
+// Name is the value for an identifier, such as a variable declaration or
+// key.
 type Name struct {
 	Value string
 }
 
+// ToName attempts to type assert the given value to a name.
 func ToName(v Value) (Name, error) {
 	n, ok := v.(Name)
 

@@ -9,18 +9,27 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Array holds a list of values, and an underlying hash of each of the items
+// in the array. This hash is used to perform in operations on the array.
 type Array struct {
 	set   map[uint32]struct{}
 	Items []Value
 }
 
+// NewArray returns an array with the given list of values. A type check is
+// performed on the array to ensure that they all contain the same type.
 func NewArray(items []Value) (*Array, error) {
 	if len(items) > 1 {
-		typ1 := items[0].valueType()
-		typ2 := items[1].valueType()
+		var typ valueType
 
-		if typ1 != typ2 {
-			return nil, errors.New("array can only contain type " + typ1.String())
+		for _, it := range items {
+			if it.valueType() != typ {
+				if typ == valueType(0) {
+					typ = it.valueType()
+					continue
+				}
+				return nil, errors.New("array can only contain type " + typ.String())
+			}
 		}
 	}
 
@@ -34,6 +43,8 @@ func NewArray(items []Value) (*Array, error) {
 	return v, nil
 }
 
+// hashItems hashes the string representation of each item in the array and
+// stores it in a table. This hash is performed using 32-bit FNV-1a hash.
 func (a *Array) hashItems() {
 	for _, it := range a.Items {
 		h := fnv.New32a()
@@ -47,6 +58,7 @@ func (a *Array) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.Items)
 }
 
+// Has returns whether or not the given value exists in the array.
 func (a *Array) Has(v Value) bool {
 	if a.set == nil {
 		return false
@@ -59,6 +71,9 @@ func (a *Array) Has(v Value) bool {
 	return ok
 }
 
+// Get returns the value at the given index in the underlying array. If the
+// given value cannot be used as an Int then an error is returned. If the
+// index is out of bounds then the Zero value is returned.
 func (a *Array) Get(v Value) (Value, error) {
 	i64, err := ToInt(v)
 
@@ -74,6 +89,9 @@ func (a *Array) Get(v Value) (Value, error) {
 	return a.Items[i], nil
 }
 
+// String formats the array into a string. Each item in the array is space
+// separated and wrapped in [ ]. The underlying items in the array will have
+// the String method called on them for formatting.
 func (a *Array) String() string {
 	var buf bytes.Buffer
 
@@ -93,6 +111,8 @@ func (a *Array) String() string {
 	return buf.String()
 }
 
+// Sprint is similar to String, the only difference being the Sprint method is
+// called on each items in the array for formatting.
 func (a *Array) Sprint() string {
 	var buf bytes.Buffer
 

@@ -1,4 +1,4 @@
-// Package Eval handles the Evaluation of a req script.
+// Package eval handles the Evaluation of a req script.
 package eval
 
 import (

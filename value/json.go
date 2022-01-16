@@ -41,6 +41,9 @@ func decodeJson(a interface{}) Value {
 	return val
 }
 
+// DecodeJSON attempts to decode all of the data in the given reader to JSON.
+// The returned value will either be of type String, Int, Bool, Array, Object,
+// or Zero depending on the JSON string being decoded.
 func DecodeJSON(r io.Reader) (Value, error) {
 	var p interface{}
 

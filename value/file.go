@@ -8,10 +8,13 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// File is the value for an open file. This holds the underlying handle to
+// the file. The file value can be used as a stream.
 type File struct {
 	*os.File
 }
 
+// ToFile attempts to type assert the given value to a file.
 func ToFile(v Value) (File, error) {
 	f, ok := v.(File)
 
@@ -42,6 +45,8 @@ func (f File) Close() error {
 	return f.File.Close()
 }
 
+// String formats the file to a string. The formatted string will detail the
+// pointer at which the underlying handle exists, along with the filename.
 func (f File) String() string {
 	name := ""
 
@@ -51,6 +56,8 @@ func (f File) String() string {
 	return fmt.Sprintf("File<addr=%p, name=%q>", f.File, name)
 }
 
+// Sprint returns the entire contents of the underlying file as a string. Once
+// read, the file cursor is returned to the beginning of the file.
 func (f File) Sprint() string {
 	b, err := io.ReadAll(f.File)
 

@@ -10,10 +10,13 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Request is the value for an HTTP request. This holds the underlying handle
+// to the request.
 type Request struct {
 	*http.Request
 }
 
+// ToRequest attempts to type assert the given value to a request.
 func ToRequest(v Value) (Request, error) {
 	r, ok := v.(Request)
 
@@ -23,6 +26,7 @@ func ToRequest(v Value) (Request, error) {
 	return r, nil
 }
 
+// Select will return the value of the field with the given name.
 func (r Request) Select(val Value) (Value, error) {
 	name, err := ToName(val)
 
@@ -58,6 +62,8 @@ func (r Request) Select(val Value) (Value, error) {
 	}
 }
 
+// String formats the request to a string. The formatted string will detail the
+// pointer at which the underlying request handle exists.
 func (r Request) String() string {
 	return fmt.Sprintf("Request<addr=%p>", r.Request)
 }
@@ -69,6 +75,8 @@ func copyrc(rc io.ReadCloser) (io.ReadCloser, io.ReadCloser) {
 	return io.NopCloser(&buf), io.NopCloser(bytes.NewBuffer(buf.Bytes()))
 }
 
+// Sprint formats the request into a string. This makes a copy of the request
+// body so as to not deplete the original.
 func (r Request) Sprint() string {
 	if r.Request == nil {
 		return ""

@@ -6,10 +6,12 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Bool is the value for boolean types.
 type Bool struct {
 	Value bool
 }
 
+// ToBool attempts to type assert the given value to a bool.
 func ToBool(v Value) (Bool, error) {
 	b, ok := v.(Bool)
 

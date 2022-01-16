@@ -11,10 +11,17 @@ type Pos struct {
 	Col  int
 }
 
+// Err records an error at the given position.
 func (p Pos) Err(msg string) error {
 	return errors.New(p.String() + " - " + msg)
 }
 
+// String formats the position into a string. The string will be formatted like
+// so depending on the values present,
+//
+// File
+// File,Line
+// File,Line:Col
 func (p Pos) String() string {
 	s := p.File
 

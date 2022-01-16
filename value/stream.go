@@ -13,6 +13,7 @@ type stream struct {
 	Stream
 }
 
+// NewStream turns the given stream into a value.
 func NewStream(s Stream) Value {
 	return &stream{
 		Stream: s,
@@ -49,6 +50,7 @@ type sectionReadCloser struct {
 
 var errClosed = errors.New("stream closed")
 
+// BufferStream returns a new stream for reading data from a location in memory.
 func BufferStream(r *bytes.Reader) Stream {
 	return &sectionReadCloser{
 		SectionReader: io.NewSectionReader(r, 0, int64(r.Len())),

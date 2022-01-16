@@ -7,10 +7,12 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Int is the value for int types.
 type Int struct {
 	Value int64
 }
 
+// ToInt attempts to type assert the given value to an int.
 func ToInt(v Value) (Int, error) {
 	i, ok := v.(Int)
 

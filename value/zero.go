@@ -6,6 +6,8 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Zero is the value that represents a zero value. The zero value can be
+// compared against any other type that also has an underlying zero value.
 type Zero struct{}
 
 func (z Zero) MarshalJSON() ([]byte, error) {

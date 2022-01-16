@@ -1,3 +1,5 @@
+// Package syntax provides functions for parsing req scripts into their ASTs
+// for evaluation.
 package syntax
 
 import (
@@ -58,6 +60,10 @@ func ParseRef(s string) (Node, error) {
 	return n, nil
 }
 
+// Parse reads all content from the given reader and parses it into an AST. The
+// given callback is used to reporting any and all errors that may occur during
+// parsing, using the given name for uniquely identifying the parser (typically
+// a filename).
 func Parse(name string, r io.Reader, errh func(Pos, string)) ([]Node, error) {
 	p := parser{
 		scanner: newScanner(newSource(name, r, errh)),
@@ -65,6 +71,7 @@ func Parse(name string, r io.Reader, errh func(Pos, string)) ([]Node, error) {
 	return p.parse(false)
 }
 
+// ParseFile is a convenience function that parses the given file useing Parse.
 func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
 	f, err := os.Open(fname)
 
@@ -77,6 +84,9 @@ func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
 	return Parse(fname, f, errh)
 }
 
+// advance moves the parser along the given follow set of tokens and stops
+// when it encounters the first one. This will always advance to EOF if none
+// of the tokens can be found.
 func (p *parser) advance(follow ...token) {
 	set := make(map[token]struct{})
 
@@ -93,6 +103,8 @@ func (p *parser) advance(follow ...token) {
 	}
 }
 
+// got will consume the given token if it matches what we currently have, and
+// returns whether or not it was consumed.
 func (p *parser) got(tok token) bool {
 	if p.tok == tok {
 		p.next()
@@ -101,11 +113,13 @@ func (p *parser) got(tok token) bool {
 	return false
 }
 
+// errAt reports an error at the given position.
 func (p *parser) errAt(pos Pos, msg string) {
 	p.errc++
 	p.scanner.source.errh(pos, msg)
 }
 
+// err reports an error at the current position.
 func (p *parser) err(msg string) {
 	p.errAt(p.pos, msg)
 }
@@ -118,12 +132,16 @@ func (p *parser) unexpected(tok token) {
 	p.err("unexpected " + tok.String())
 }
 
+// want will attempt to consume the given token. If the given token cannot be
+// consumed, then it reports an error.
 func (p *parser) want(tok token) {
 	if !p.got(tok) {
 		p.expected(tok)
 	}
 }
 
+// node returns a new node at the current position for use in constructing
+// a valid node in the AST.
 func (p *parser) node() node {
 	return node{
 		pos: p.pos,
@@ -158,6 +176,8 @@ func (p *parser) literal() *Lit {
 	return n
 }
 
+// ref parses a variable reference expression. This will parse the $Ref,
+// $Left.Right, and $Left[Right] expressions recursively.
 func (p *parser) ref() *Ref {
 	if p.tok != _Ref {
 		return nil
@@ -229,6 +249,9 @@ loop:
 	return ref
 }
 
+// list parses all of the tokens in a list with the given separator of sep, and
+// end token of end. The given callback parse is called to actually handle the
+// parsing of tokens.
 func (p *parser) list(sep, end token, parse func()) {
 	for p.tok != _EOF && p.tok != end {
 		parse()
@@ -258,8 +281,6 @@ func (p *parser) obj() *Object {
 		key := p.name()
 
 		p.want(_Colon)
-
-		//		val := p.operand()
 
 		n.Pairs = append(n.Pairs, &KeyExpr{
 			node:  p.node(),
@@ -429,6 +450,8 @@ func (p *parser) chain(cmd *CommandStmt) *ChainExpr {
 	return n
 }
 
+// operand parses an operand, this will either be a literal, variable reference,
+// object, or an array.
 func (p *parser) operand() Node {
 	var n Node
 
@@ -448,6 +471,7 @@ func (p *parser) operand() Node {
 	return n
 }
 
+// expr will either parse a command, chain expression, or an operand.
 func (p *parser) expr() Node {
 	if p.tok == _Name {
 		n := p.command(p.name())
@@ -460,6 +484,9 @@ func (p *parser) expr() Node {
 	return p.operand()
 }
 
+// binexpr parses a binary expression. First this will parse a normal
+// expression then attempt to parse a binary expression if any operator
+// tokens are encountered used the given operator precedence of prec.
 func (p *parser) binexpr(prec int) Node {
 	n := p.expr()
 
@@ -512,6 +539,9 @@ func (p *parser) vardecl(name *Name) *VarDecl {
 	return n
 }
 
+// stmt parses a top-level statement. If inRepl is true then this will allow
+// for the parsing of variable reference expressions, as in a REPL you may want
+// to have the contents of these displayed.
 func (p *parser) stmt(inRepl bool) Node {
 	var n Node
 

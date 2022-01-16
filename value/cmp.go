@@ -41,6 +41,8 @@ func opError(op syntax.Op, typ valueType) error {
 	return errors.New("cannot perform " + op.String() + " on " + typ.String())
 }
 
+// Compare performs the given operation between the two values and returns the
+// result of that comparison. This returned value will be a truthy value.
 func Compare(a Value, op syntax.Op, b Value) (Value, error) {
 	set := map[syntax.Op]struct{}{
 		syntax.EqOp:  {},
@@ -70,6 +72,7 @@ func Compare(a Value, op syntax.Op, b Value) (Value, error) {
 	}
 }
 
+// CompareType compares the types of the given values.
 func CompareType(a, b Value) error {
 	if a.valueType() != b.valueType() {
 		return typeError(a.valueType(), b.valueType())
@@ -77,6 +80,8 @@ func CompareType(a, b Value) error {
 	return nil
 }
 
+// Truthy checks to see if the given value is a bool. If so, then the underlying
+// bool is returned.
 func Truthy(v Value) bool {
 	if b, ok := v.(Bool); ok {
 		return b.Value

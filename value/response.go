@@ -10,10 +10,13 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Response is the value for an HTTP response. This holds the underlying handle
+// to the response.
 type Response struct {
 	*http.Response
 }
 
+// Select will return the value of the field with the given name.
 func (r Response) Select(val Value) (Value, error) {
 	name, err := ToName(val)
 
@@ -49,10 +52,14 @@ func (r Response) Select(val Value) (Value, error) {
 	}
 }
 
+// String formats the response to a string. The formatted string will detail the
+// pointer at which the underlying response handle exists.
 func (r Response) String() string {
 	return fmt.Sprintf("Response<addr=%p>", r.Response)
 }
 
+// Sprint formats the response into a string. This makes a copy of the response
+// body so as to not deplete the original.
 func (r Response) Sprint() string {
 	if r.Response == nil {
 		return ""

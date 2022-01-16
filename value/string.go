@@ -7,10 +7,12 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// String is the value for string types.
 type String struct {
 	Value string
 }
 
+// ToString attempts to type assert the given value to a strinng.
 func ToString(v Value) (String, error) {
 	s, ok := v.(String)
 

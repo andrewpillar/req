@@ -8,10 +8,12 @@ import (
 	"github.com/andrewpillar/req/syntax"
 )
 
+// Object holds a list of values indexed under a string.
 type Object struct {
 	Pairs map[string]Value
 }
 
+// ToObjectt attempts to type assert the given value to an object.
 func ToObject(v Value) (Object, error) {
 	o, ok := v.(Object)
 
@@ -25,6 +27,8 @@ func (o Object) MarshalJSON() ([]byte, error) {
 	return json.Marshal(o.Pairs)
 }
 
+// Has checks to see if the current object has the current value, if that given
+// value is a string.
 func (o Object) Has(v Value) bool {
 	if o.Pairs == nil {
 		return false
@@ -40,6 +44,8 @@ func (o Object) Has(v Value) bool {
 	return ok
 }
 
+// Get returns the value at the given index, if that value is a string. If there
+// is no value at the given index, then Zero is returned.
 func (o Object) Get(v Value) (Value, error) {
 	str, err := ToString(v)
 
@@ -55,6 +61,9 @@ func (o Object) Get(v Value) (Value, error) {
 	return val, nil
 }
 
+// String formats the object into a string. Each key-value pair is space
+// spearated and wrapped in { }. The underlying values in the array will have
+// the String method called on them for formatting.
 func (o Object) String() string {
 	var buf bytes.Buffer
 
@@ -76,6 +85,8 @@ func (o Object) String() string {
 	return buf.String()
 }
 
+// Sprint is similar to String, the only difference being the Sprint method is
+// called on each value in the object for formatting.
 func (o Object) Sprint() string {
 	var buf bytes.Buffer
 
