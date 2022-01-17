@@ -653,6 +653,12 @@ func encodeBase64(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
+	if err := enc.Close(); err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
 	return value.String{
 		Value: buf.String(),
 	}, nil
