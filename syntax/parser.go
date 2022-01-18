@@ -403,13 +403,20 @@ func (p *parser) matchstmt() *MatchStmt {
 }
 
 func (p *parser) ifstmt() *IfStmt {
+	nodpos := p.node()
+
 	if !p.got(_If) {
 		return nil
 	}
 
 	n := &IfStmt{
-		node: p.node(),
+		node: nodpos,
 		Cond: p.binexpr(0),
+	}
+
+	if p.tok != _Lbrace {
+		p.errAt(n.Pos(), "missing condition in if statement")
+		return n
 	}
 
 	n.Then = p.blockstmt()
