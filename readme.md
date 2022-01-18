@@ -15,9 +15,9 @@ making the call,
         exit 1;
     }
 
-    Headers = {
+    Headers = (
         Authorization: "Bearer {$Token}",
-    };
+    );
 
     Resp = GET "{$Endpoint}/user" $Headers -> send;
 
