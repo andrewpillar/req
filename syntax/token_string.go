@@ -21,17 +21,22 @@ func _() {
 	_ = x[_Ref-11]
 	_ = x[_Lbrace-12]
 	_ = x[_Rbrace-13]
-	_ = x[_Lbrack-14]
-	_ = x[_Rbrack-15]
-	_ = x[_If-16]
-	_ = x[_Else-17]
-	_ = x[_Match-18]
-	_ = x[_Range-19]
+	_ = x[_Lparen-14]
+	_ = x[_Rparen-15]
+	_ = x[_Lbrack-16]
+	_ = x[_Rbrack-17]
+	_ = x[_Break-18]
+	_ = x[_Continue-19]
+	_ = x[_If-20]
+	_ = x[_Else-21]
+	_ = x[_For-22]
+	_ = x[_Match-23]
+	_ = x[_Range-24]
 }
 
-const _token_name = "eofnameliteralopsemi or newline,:.->=${}[]ifelsematchrange"
+const _token_name = "eofnameliteralopsemi or newline,:.->=${}))[]breakcontinueifelseformatchrange"
 
-var _token_index = [...]uint8{0, 3, 7, 14, 16, 31, 32, 33, 34, 36, 37, 38, 39, 40, 41, 42, 44, 48, 53, 58}
+var _token_index = [...]uint8{0, 3, 7, 14, 16, 31, 32, 33, 34, 36, 37, 38, 39, 40, 41, 42, 43, 44, 49, 57, 59, 63, 66, 71, 76}
 
 func (i token) String() string {
 	i -= 1

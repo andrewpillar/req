@@ -265,16 +265,16 @@ func (p *parser) list(sep, end token, parse func()) {
 }
 
 func (p *parser) obj() *Object {
-	p.want(_Lbrace)
+	p.want(_Lparen)
 
 	n := &Object{
 		node: p.node(),
 	}
 
-	p.list(_Comma, _Rbrace, func() {
+	p.list(_Comma, _Rparen, func() {
 		if p.tok != _Name {
 			p.expected(_Name)
-			p.advance(_Rbrace, _Semi)
+			p.advance(_Rparen, _Semi)
 			return
 		}
 
@@ -285,7 +285,7 @@ func (p *parser) obj() *Object {
 		n.Pairs = append(n.Pairs, &KeyExpr{
 			node:  p.node(),
 			Key:   key,
-			Value: p.binexpr(0),
+			Value: p.expr(),
 		})
 	})
 	return n
@@ -411,7 +411,7 @@ func (p *parser) ifstmt() *IfStmt {
 
 	n := &IfStmt{
 		node: nodpos,
-		Cond: p.binexpr(0),
+		Cond: p.expr(),
 	}
 
 	if p.tok != _Lbrace {
@@ -435,6 +435,90 @@ func (p *parser) ifstmt() *IfStmt {
 	return n
 }
 
+func (p *parser) simplestmt() Node {
+	switch p.tok {
+	case _Name:
+		name := p.name()
+
+		if p.tok != _Assign {
+			p.unexpected(p.tok)
+			p.advance(_Semi)
+		}
+		return p.vardecl(name)
+	case _Literal:
+		return p.literal()
+	case _Ref:
+		return p.ref()
+	default:
+		p.unexpected(p.tok)
+		p.advance(_Semi)
+	}
+	return nil
+}
+
+func (p *parser) initExpr() Node {
+	var n Node
+
+	switch p.tok {
+	case _Name:
+		name := p.name()
+
+		if p.tok != _Assign {
+			p.unexpected(p.tok)
+			p.advance(_Semi)
+		}
+		return p.vardecl(name)
+	case _Literal:
+		n = p.literal()
+	case _Ref:
+		n = p.ref()
+	default:
+		p.unexpected(p.tok)
+		p.advance(_Semi)
+		return n
+	}
+
+	if p.tok == _Op {
+		n = p.binaryExpr(n, 0)
+	}
+	return n
+}
+
+func (p *parser) forstmt() *ForStmt {
+	nodpos := p.node()
+
+	if !p.got(_For) {
+		return nil
+	}
+
+	n := &ForStmt{
+		node: nodpos,
+	}
+
+	if p.tok != _Lbrace {
+		n.Init = p.initExpr()
+
+		if !p.got(_Semi) {
+			if p.tok == _Lbrace {
+				n.Cond = n.Init
+				n.Init = nil
+				goto body
+			}
+
+			p.err("expected for loop condition")
+			return nil
+		}
+
+		n.Cond = p.expr()
+		p.want(_Semi)
+		n.Post = p.simplestmt()
+	}
+
+body:
+	n.Body = p.blockstmt()
+	return n
+}
+
 func (p *parser) chain(cmd *CommandStmt) *ChainExpr {
 	n := &ChainExpr{
 		Commands: []*CommandStmt{cmd},
@@ -450,8 +534,7 @@ func (p *parser) chain(cmd *CommandStmt) *ChainExpr {
 		n.Commands = append(n.Commands, p.command(p.name()))
 
 		if !p.got(_Arrow) && p.tok != _Semi && p.tok != _EOF {
-			p.err("expected " + _Arrow.String() + " or " + _Semi.String())
-			p.next()
+			break
 		}
 	}
 	return n
@@ -467,35 +550,25 @@ func (p *parser) operand() Node {
 		n = p.literal()
 	case _Ref:
 		n = p.ref()
-	case _Lbrace:
+	case _Lparen:
 		n = p.obj()
 	case _Lbrack:
 		n = p.arr()
-	default:
-		p.unexpected(p.tok)
-		p.advance(_Rbrace, _Semi)
 	}
 	return n
 }
 
-// expr will either parse a command, chain expression, or an operand.
 func (p *parser) expr() Node {
-	if p.tok == _Name {
-		n := p.command(p.name())
-
-		if p.got(_Arrow) {
-			return p.chain(n)
-		}
-		return n
-	}
-	return p.operand()
+	return p.binaryExpr(nil, 0)
 }
 
-// binexpr parses a binary expression. First this will parse a normal
+// binaryExpr parses a binary expression. First this will parse a normal
 // expression then attempt to parse a binary expression if any operator
-// tokens are encountered used the given operator precedence of prec.
-func (p *parser) binexpr(prec int) Node {
-	n := p.expr()
+// tokens are encountered using the given operator precedence of prec.
+func (p *parser) binaryExpr(n Node, prec int) Node {
+	if n == nil {
+		n = p.unaryExpr()
+	}
 
 	for p.tok == _Op && p.prec > prec {
 		o := &Operation{
@@ -508,11 +581,25 @@ func (p *parser) binexpr(prec int) Node {
 		p.next()
 
 		o.Left = n
-		o.Right = p.binexpr(oprec)
+		o.Right = p.binaryExpr(nil, oprec)
 
 		n = o
 	}
 	return n
+}
+
+// unaryExpr parses a unary expression, an expression with only a single
+// operand.
+func (p *parser) unaryExpr() Node {
+	if p.tok == _Name {
+		n := p.command(p.name())
+
+		if p.got(_Arrow) {
+			return p.chain(n)
+		}
+		return n
+	}
+	return p.operand()
 }
 
 func (p *parser) command(name *Name) *CommandStmt {
@@ -526,7 +613,13 @@ func (p *parser) command(name *Name) *CommandStmt {
 			n.Args = append(n.Args, p.name())
 			continue
 		}
-		n.Args = append(n.Args, p.operand())
+
+		arg := p.operand()
+
+		if arg == nil {
+			break
+		}
+		n.Args = append(n.Args, arg)
 	}
 	return n
 }
@@ -541,7 +634,7 @@ func (p *parser) vardecl(name *Name) *VarDecl {
 		return nil
 	}
 
-	n.Value = p.binexpr(0)
+	n.Value = p.expr()
 
 	return n
 }
@@ -573,6 +666,9 @@ func (p *parser) stmt(inRepl bool) Node {
 	case _If:
 		n = p.ifstmt()
 		return n
+	case _For:
+		n = p.forstmt()
+		return n
 	case _Ref:
 		if inRepl {
 			n = p.ref()
@@ -584,10 +680,8 @@ func (p *parser) stmt(inRepl bool) Node {
 		p.advance(_Semi)
 	}
 
-	if p.tok != _EOF {
-		if !p.got(_Semi) {
-			p.expected(_Semi)
-		}
+	if !p.got(_Semi) {
+		p.expected(_Semi)
 	}
 	return n
 }

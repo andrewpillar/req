@@ -11,10 +11,10 @@ if $Token == "" {
 	exit 1;
 }
 
-Resp = GET "{$Endpoint}/user" {
+Resp = GET "{$Endpoint}/user" (
 	Authorization: "Bearer {$Token}",
 	Content-Type: "application/json; charset=utf-8",
-} -> send;
+) -> send;
 
 match $Resp.StatusCode {
     200 -> {

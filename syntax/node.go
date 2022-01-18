@@ -172,3 +172,15 @@ type IfStmt struct {
 	Then Node
 	Else Node
 }
+
+// ForStmt for executing a block code multiple times.
+// for Cond { Body }
+// for Init; Cond; Post { Body }
+type ForStmt struct {
+	node
+
+	Init Node
+	Cond Node
+	Post Node
+	Body *BlockStmt
+}

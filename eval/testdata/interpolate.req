@@ -8,6 +8,6 @@ Arr = [1, 2, 3];
 
 print "Arr[0] = {$Arr[0]}";
 
-Obj = {S: "string"};
+Obj = (S: "string");
 
 print "Obj['S'] = {$Obj["S"]}";

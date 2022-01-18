@@ -215,6 +215,40 @@ func checkOperation(t *testing.T, expected, actual *Operation) {
 	}
 }
 
+func checkForStmt(t *testing.T, expected, actual *ForStmt) {
+	if expected.Init != nil {
+		if actual.Init == nil {
+			t.Errorf("%s - expected Init for ForStmt\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Init, actual.Init)
+	}
+
+	if expected.Cond != nil {
+		if actual.Cond == nil {
+			t.Errorf("%s - expected Cond for ForStmt\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Cond, actual.Cond)
+	}
+
+	if expected.Post != nil {
+		if actual.Post == nil {
+			t.Errorf("%s - expected Post for ForStmt\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Post, actual.Post)
+	}
+
+	if expected.Body != nil {
+		if actual.Body == nil {
+			t.Errorf("%s - expected Body for ForStmt\n", actual.Pos())
+			return
+		}
+		checkNode(t, expected.Body, actual.Body)
+	}
+}
+
 func checkIfStmt(t *testing.T, expected, actual *IfStmt) {
 	if expected.Cond != nil {
 		if actual.Cond == nil {
@@ -363,6 +397,14 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkIfStmt(t, v, if_)
+	case *ForStmt:
+		for_, ok := actual.(*ForStmt)
+
+		if !ok {
+			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
+			return
+		}
+		checkForStmt(t, v, for_)
 	default:
 		t.Errorf("%s - unknown node type=%T\n", actual.Pos(), v)
 	}
@@ -482,6 +524,118 @@ func Test_ParseArray(t *testing.T) {
 									Value: "true",
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(nn) != len(expected) {
+		t.Fatalf("node count mismatch, expected=%d, got=%d\n", len(expected), len(nn))
+	}
+
+	for i, n := range nn {
+		checkNode(t, expected[i], n)
+	}
+}
+
+func Test_ParseFor(t *testing.T) {
+	nn, err := ParseFile(filepath.Join("testdata", "for.req"), errh(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		&ForStmt{},
+		&ForStmt{
+			Cond: &Lit{
+				Type:  BoolLit,
+				Value: "true",
+			},
+		},
+		&ForStmt{
+			Cond: &Operation{
+				Op: AndOp,
+				Left: &Lit{
+					Type:  BoolLit,
+					Value: "true",
+				},
+				Right: &Lit{
+					Type:  BoolLit,
+					Value: "true",
+				},
+			},
+		},
+		&ForStmt{
+			Init: &VarDecl{
+				Name: &Name{Value: "Line"},
+				Value: &CommandStmt{
+					Name: &Name{Value: "read"},
+					Args: []Node{
+						&Ref{
+							Left: &Name{Value: "F"},
+						},
+					},
+				},
+			},
+			Cond: &Operation{
+				Op: NeqOp,
+				Left: &Ref{
+					Left: &Name{Value: "Line"},
+				},
+				Right: &Lit{
+					Type: StringLit,
+				},
+			},
+			Post: &VarDecl{
+				Name: &Name{Value: "Line"},
+				Value: &CommandStmt{
+					Name: &Name{Value: "read"},
+					Args: []Node{
+						&Ref{
+							Left: &Name{Value: "F"},
+						},
+					},
+				},
+			},
+		},
+		&ForStmt{
+			Init: &VarDecl{
+				Name: &Name{Value: "Line"},
+				Value: &CommandStmt{
+					Name: &Name{Value: "read"},
+					Args: []Node{
+						&Ref{
+							Left: &Name{Value: "F"},
+						},
+					},
+				},
+			},
+			Cond: &Operation{
+				Op: AndOp,
+				Left: &Operation{
+					Op: NeqOp,
+					Left: &Ref{
+						Left: &Name{Value: "Line"},
+					},
+					Right: &Lit{
+						Type: StringLit,
+					},
+				},
+				Right: &Lit{
+					Type:  BoolLit,
+					Value: "true",
+				},
+			},
+			Post: &VarDecl{
+				Name: &Name{Value: "Line"},
+				Value: &CommandStmt{
+					Name: &Name{Value: "read"},
+					Args: []Node{
+						&Ref{
+							Left: &Name{Value: "F"},
 						},
 					},
 				},

@@ -84,13 +84,18 @@ const (
 
 	_Lbrace // {
 	_Rbrace // }
+	_Lparen // )
+	_Rparen // )
 	_Lbrack // [
 	_Rbrack // ]
 
-	_If    // if
-	_Else  // else
-	_Match // match
-	_Range // range
+	_Break    // break
+	_Continue // continue
+	_If       // if
+	_Else     // else
+	_For      // for
+	_Match    // match
+	_Range    // range
 )
 
 type LitType uint
@@ -103,10 +108,13 @@ const (
 )
 
 var keywords = map[string]token{
-	"if":    _If,
-	"else":  _Else,
-	"match": _Match,
-	"range": _Range,
+	"break":    _Break,
+	"continue": _Continue,
+	"if":       _If,
+	"else":     _Else,
+	"for":      _For,
+	"match":    _Match,
+	"range":    _Range,
 }
 
 func lookupTok(s string) token {

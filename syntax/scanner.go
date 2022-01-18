@@ -160,6 +160,10 @@ redo:
 		sc.tok = _Lbrace
 	case '}':
 		sc.tok = _Rbrace
+	case '(':
+		sc.tok = _Lparen
+	case ')':
+		sc.tok = _Rparen
 	case '[':
 		sc.tok = _Lbrack
 	case ']':

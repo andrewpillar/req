@@ -214,7 +214,7 @@ func read(cmd string, args []value.Value) (value.Value, error) {
 
 	line := string(buf[:pos])
 
-	off, err = s.Seek(int64(pos + 1) + off, io.SeekStart)
+	off, err = s.Seek(int64(pos+1)+off, io.SeekStart)
 
 	if err != nil {
 		return nil, &CommandError{
@@ -239,7 +239,7 @@ func doPrint(out io.Writer, cmd string, args []value.Value) (value.Value, error)
 
 	var buf bytes.Buffer
 
-	end := len(args)-1
+	end := len(args) - 1
 
 	for i, arg := range args {
 		if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {

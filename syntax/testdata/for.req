@@ -1,0 +1,21 @@
+
+
+for {
+
+}
+
+for true {
+
+}
+
+for true and true {
+
+}
+
+for Line = read $F; $Line != ""; Line = read $F {
+
+}
+
+for Line = read $F; $Line != "" and true; Line = read $F {
+
+}

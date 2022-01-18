@@ -6,7 +6,7 @@ encode base64 "Hello world" -> decode base64 -> print;
 decode json $JSON -> print;
 decode url "I=10&S=string&A=1&A=2&A=3" -> print;
 
-encode form-data {
+encode form-data (
 	Name: "payload.json",
 	File: $JSON,
-} -> decode form-data -> print;
+) -> decode form-data -> print;

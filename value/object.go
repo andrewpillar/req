@@ -62,12 +62,12 @@ func (o Object) Get(v Value) (Value, error) {
 }
 
 // String formats the object into a string. Each key-value pair is space
-// spearated and wrapped in { }. The underlying values in the array will have
+// spearated and wrapped in ( ). The underlying values in the array will have
 // the String method called on them for formatting.
 func (o Object) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteByte('{')
+	buf.WriteByte('(')
 
 	end := len(o.Pairs) - 1
 	i := 0
@@ -81,7 +81,7 @@ func (o Object) String() string {
 		}
 	}
 
-	buf.WriteByte('}')
+	buf.WriteByte(')')
 	return buf.String()
 }
 
@@ -90,7 +90,7 @@ func (o Object) String() string {
 func (o Object) Sprint() string {
 	var buf bytes.Buffer
 
-	buf.WriteByte('{')
+	buf.WriteByte('(')
 
 	order := make([]string, 0, len(o.Pairs))
 
@@ -110,7 +110,7 @@ func (o Object) Sprint() string {
 		}
 	}
 
-	buf.WriteByte('}')
+	buf.WriteByte(')')
 	return buf.String()
 }
 

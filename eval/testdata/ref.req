@@ -1,8 +1,8 @@
 
 Array = [1, 2, 3, 4];
-Obj = {
+Obj = (
 	Key: "value",
-};
+);
 
 Resp = GET "__endpoint__" -> send;
 
