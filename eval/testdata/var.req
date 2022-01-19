@@ -9,4 +9,4 @@ Obj = (
 	Key: "value",
 );
 
-print $String $Int $Bool $Array $Obj;
+writeln _ "{$String} {$Int} {$Bool} {$Array} {$Obj}";

@@ -1,3 +1,3 @@
 
 
-encode base64 "Hello world" -> print;
+encode base64 "Hello world" -> writeln _;

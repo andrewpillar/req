@@ -81,8 +81,9 @@ var builtinCmds = []*Command{
 	ExitCmd,
 	OpenCmd,
 	ReadCmd,
-	FprintCmd,
-	PrintCmd,
+	ReadlnCmd,
+	WriteCmd,
+	WritelnCmd,
 	HeadCmd,
 	OptionsCmd,
 	GetCmd,
@@ -536,6 +537,38 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			return nil, e.err(v.Pos(), err)
 		}
 		return val, nil
+	case *syntax.ForStmt:
+		c2 := c.Copy()
+
+		if v.Init != nil {
+			if _, err := e.Eval(c2, v.Init); err != nil {
+				return nil, e.err(v.Pos(), err)
+			}
+		}
+
+		for {
+			if v.Cond != nil {
+				val, err := e.Eval(c2, v.Cond)
+
+				if err != nil {
+					return nil, e.err(v.Pos(), err)
+				}
+
+				if !value.Truthy(val) {
+					break
+				}
+			}
+
+			if _, err := e.Eval(c2, v.Body); err != nil {
+				return nil, e.err(v.Body.Pos(), err)
+			}
+
+			if v.Post != nil {
+				if _, err := e.Eval(c2, v.Post); err != nil {
+					return nil, e.err(v.Pos(), err)
+				}
+			}
+		}
 	}
 	return nil, nil
 }

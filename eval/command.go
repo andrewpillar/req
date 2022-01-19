@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -70,6 +69,10 @@ func (c Command) invoke(args []value.Value) (value.Value, error) {
 				Err: errNotEnoughArgs,
 			}
 		}
+	}
+
+	if c.Func == nil {
+		panic("nil command handler for command " + c.Name)
 	}
 	return c.Func(c.Name, args)
 }
@@ -159,18 +162,64 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-// ReadCmd implements the read command for reading a single line from the
-// given stream.
-var ReadCmd = &Command{
-	Name: "read",
-	Argc: 1,
-	Func: read,
+var (
+	// ReadCmd implements the read command for reading all of the data in a
+	// given stream.
+	ReadCmd = &Command{
+		Name: "read",
+		Argc: 1,
+		Func: read,
+	}
+
+	// ReadlnCmd implements the readln command for reading a single line from
+	// the given stream.
+	ReadlnCmd = &Command{
+		Name: "readln",
+		Argc: 1,
+		Func: readln,
+	}
+)
+
+func getReadSource(arg value.Value) (io.ReadSeeker, error) {
+	switch v := arg.(type) {
+	case value.Name:
+		if v.Value != "_" {
+			return nil, errors.New("cannot use type " + value.Type(arg) + " as stream")
+		}
+		return os.Stdin, nil
+	case value.Stream:
+		return v, nil
+	default:
+		return nil, errors.New("cannot use type " + value.Type(arg) + " as stream")
+	}
 }
 
 func read(cmd string, args []value.Value) (value.Value, error) {
-	arg0 := args[0]
+	rs, err := getReadSource(args[0])
 
-	s, err := value.ToStream(arg0)
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	b, err := io.ReadAll(rs)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	return value.String{
+		Value: string(b),
+	}, nil
+}
+
+func readln(cmd string, args []value.Value) (value.Value, error) {
+	rs, err := getReadSource(args[0])
 
 	if err != nil {
 		return nil, &CommandError{
@@ -181,7 +230,7 @@ func read(cmd string, args []value.Value) (value.Value, error) {
 
 	// Get current offset so we can rewind back in the stream to where the
 	// newline actuall occurred.
-	off, err := s.Seek(0, io.SeekCurrent)
+	off, err := rs.Seek(0, io.SeekCurrent)
 
 	if err != nil {
 		return nil, &CommandError{
@@ -192,7 +241,7 @@ func read(cmd string, args []value.Value) (value.Value, error) {
 
 	buf := make([]byte, 4096)
 
-	n, err := s.Read(buf)
+	n, err := rs.Read(buf)
 
 	if err != nil {
 		if !errors.Is(err, io.EOF) {
@@ -207,14 +256,14 @@ func read(cmd string, args []value.Value) (value.Value, error) {
 
 	for i, b := range buf[:n] {
 		if b == '\n' {
-			pos = i
+			pos = i+1
 			break
 		}
 	}
 
 	line := string(buf[:pos])
 
-	off, err = s.Seek(int64(pos+1)+off, io.SeekStart)
+	off, err = rs.Seek(int64(pos)+off, io.SeekStart)
 
 	if err != nil {
 		return nil, &CommandError{
@@ -228,7 +277,21 @@ func read(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-func doPrint(out io.Writer, cmd string, args []value.Value) (value.Value, error) {
+var (
+	WriteCmd = &Command{
+		Name: "write",
+		Argc: -1,
+		Func: write(os.Stdout),
+	}
+
+	WritelnCmd = &Command{
+		Name: "writeln",
+		Argc: -1,
+		Func: writeln(os.Stdout),
+	}
+)
+
+func doWrite(out io.Writer, cmd string, args []value.Value) (value.Value, error) {
 	if len(args) < 1 {
 		return nil, &CommandError{
 			Op:  "call",
@@ -237,26 +300,37 @@ func doPrint(out io.Writer, cmd string, args []value.Value) (value.Value, error)
 		}
 	}
 
+	arg0 := args[0]
+
+	switch v := arg0.(type) {
+	case value.Name:
+		if v.Value != "_" {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: errors.New("cannot use type " + value.Type(arg0) + " as file"),
+			}
+		}
+	case value.File:
+		out = v
+	default:
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot use type " + value.Type(arg0) + " as file"),
+		}
+	}
+
 	var buf bytes.Buffer
 
-	end := len(args) - 1
-
-	for i, arg := range args {
-		if _, err := fmt.Fprint(&buf, arg.Sprint()); err != nil {
+	for _, arg := range args[1:] {
+		if _, err := io.WriteString(&buf, arg.Sprint()); err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
 			}
 		}
-
-		if i != end {
-			buf.WriteByte(' ')
-		}
 	}
 
-	buf.WriteByte('\n')
-
-	if _, err := fmt.Fprint(out, buf.String()); err != nil {
+	if _, err := io.Copy(out, &buf); err != nil {
 		return nil, &CommandError{
 			Cmd: cmd,
 			Err: err,
@@ -265,43 +339,16 @@ func doPrint(out io.Writer, cmd string, args []value.Value) (value.Value, error)
 	return nil, nil
 }
 
-// PrintCmd implements the print command for formatting the given arguments
-// using Sprint and writing them to standard output. Each argument is space
-// separated, and a terminating newline is written.
-var PrintCmd = &Command{
-	Name: "print",
-	Argc: -1,
-	Func: print(os.Stdout),
-}
-
-func print(out io.Writer) CommandFunc {
+func write(out io.Writer) CommandFunc {
 	return func(cmd string, args []value.Value) (value.Value, error) {
-		return doPrint(out, cmd, args)
+		return doWrite(out, cmd, args)
 	}
 }
 
-// FprintCmd implements the fprint command for formatting the given arguments
-// using Sprint and writing them to a given file. The first argument to this
-// command must be a file. Each argument is space separated, and a terminating
-// newline is written.
-var FprintCmd = &Command{
-	Name: "fprint",
-	Argc: -1,
-	Func: fprint,
-}
-
-func fprint(cmd string, args []value.Value) (value.Value, error) {
-	arg0 := args[0]
-
-	f, err := value.ToFile(arg0)
-
-	if err != nil {
-		return nil, &CommandError{
-			Cmd: cmd,
-			Err: err,
-		}
+func writeln(out io.Writer) CommandFunc {
+	return func(cmd string, args []value.Value) (value.Value, error) {
+		return doWrite(out, cmd, append(args, value.String{Value: "\n"}))
 	}
-	return doPrint(f.File, cmd, args[1:])
 }
 
 // HeadCmd, OptionsCmd, GetCmd, PostCmd, PatchCmd, PutCmd, DeleteCmd, are the

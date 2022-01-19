@@ -1,0 +1,10 @@
+
+
+F = open "testdata/readln.req";
+
+readln $F;
+readln $F;
+readln $F -> write _;
+readln $F;
+readln $F -> write _;
+readln $F -> write _;

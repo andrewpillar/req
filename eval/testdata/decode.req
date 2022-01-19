@@ -2,11 +2,11 @@
 
 JSON = open "testdata/payload.json";
 
-encode base64 "Hello world" -> decode base64 -> print;
-decode json $JSON -> print;
-decode url "I=10&S=string&A=1&A=2&A=3" -> print;
+encode base64 "Hello world" -> decode base64 -> writeln _;
+decode json $JSON -> writeln _;
+decode url "I=10&S=string&A=1&A=2&A=3" -> writeln _;
 
 encode form-data (
 	Name: "payload.json",
 	File: $JSON,
-) -> decode form-data -> print;
+) -> decode form-data -> writeln _;

@@ -10,4 +10,4 @@ Resp = POST "__endpoint__" (
 	Content-Type: "application/json",
 ) $JSON -> send;
 
-print $Resp.StatusCode;
+writeln _ $Resp.StatusCode;

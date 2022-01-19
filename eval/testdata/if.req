@@ -1,41 +1,41 @@
 
 
 if true {
-	print "true";
+	writeln _ "true";
 }
 
 if true and false {
-	print "true and false";
+	writeln _ "true and false";
 }
 
 if true != false {
-	print "true != false";
+	writeln _ "true != false";
 }
 
 if 10 == 11 or true {
-	print "10 == 11 or true";
+	writeln _ "10 == 11 or true";
 }
 
 if 10 < 20 {
-	print "10 < 20";
+	writeln _ "10 < 20";
 }
 
 if 10 > 20 {
-	print "10 > 20";
+	writeln _ "10 > 20";
 }
 
 if 10 == 10 or "10" == "10" {
-	print "10 == 10 or '10' == '10'";
+	writeln _ "10 == 10 or '10' == '10'";
 }
 
 if [] == [] {
-	print "[] == []";
+	writeln _ "[] == []";
 }
 
 if [1, 2, 3, 4] == ["one", "two", "three", "four"] {
-	print "[1, 2, 3, 4] == ['one', 'two', 'three', 'four']";
+	writeln _ "[1, 2, 3, 4] == ['one', 'two', 'three', 'four']";
 }
 
 if [1, 2, 3, 4] == [1, 2, 3, 4] {
-	print "[1, 2, 3, 4] == [1, 2, 3, 4]";
+	writeln _ "[1, 2, 3, 4] == [1, 2, 3, 4]";
 }

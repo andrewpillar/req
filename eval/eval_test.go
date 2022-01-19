@@ -57,7 +57,8 @@ func Test_Eval(t *testing.T) {
 		fname := filepath.Join("testdata", ent.Name())
 		out := fname[:len(fname)-3] + "out"
 
-		PrintCmd.Func = print(&buf)
+		WriteCmd.Func = write(&buf)
+		WritelnCmd.Func = writeln(&buf)
 
 		nn, err := syntax.Parse(fname, readfile(t, fname), errh(t))
 
@@ -91,12 +92,12 @@ func Test_EvalErrors(t *testing.T) {
 	}{
 		{`encode base64 "Hello world" -> command;`, syntax.Pos{Line: 1, Col: 32}},
 		{`if "10" == 10 { }`, syntax.Pos{Line: 1, Col: 9}},
-		{`Arr = []; print $Arr[true];`, syntax.Pos{Line: 1, Col: 21}},
-		{`Arr = []; print $Arr["true"];`, syntax.Pos{Line: 1, Col: 21}},
-		{`Arr = []; print "{$Arr["true"]}";`, syntax.Pos{Line: 1, Col: 18}},
-		{`print $Undefined;`, syntax.Pos{Line: 1, Col: 8}},
-		{`print "Hello {$Undefined}";`, syntax.Pos{Line: 1, Col: 14}},
-		{`print "Hello {Undefined}";`, syntax.Pos{Line: 1, Col: 14}},
+		{`Arr = []; writeln _ $Arr[true];`, syntax.Pos{Line: 1, Col: 25}},
+		{`Arr = []; writeln _ $Arr["true"];`, syntax.Pos{Line: 1, Col: 25}},
+		{`Arr = []; writeln _ "{$Arr["true"]}";`, syntax.Pos{Line: 1, Col: 22}},
+		{`writeln _ $Undefined;`, syntax.Pos{Line: 1, Col: 12}},
+		{`writeln _ "Hello {$Undefined}";`, syntax.Pos{Line: 1, Col: 18}},
+		{`writeln _ "Hello {Undefined}";`, syntax.Pos{Line: 1, Col: 18}},
 	}
 
 	for i, test := range tests {

@@ -13,10 +13,10 @@ Content-Type: application/octet-stream
 
 F = open "testdata/encode.req";
 
-encode base64 "Hello world" -> print;
-encode json (S: "string", I: 10, A: [1, 2, 3]) -> print;
-encode url (S: "string", I: 10, A: [1, 2, 3]) -> print;
-encode form-data (Name: "encode.req", File: $F) -> print;
+encode base64 "Hello world" -> writeln _;
+encode json (S: "string", I: 10, A: [1, 2, 3]) -> writeln _;
+encode url (S: "string", I: 10, A: [1, 2, 3]) -> writeln _;
+encode form-data (Name: "encode.req", File: $F) -> writeln _;
 
 --Test_Eval--
 

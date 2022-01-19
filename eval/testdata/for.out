@@ -1,0 +1,7 @@
+
+
+F = open "testdata/for.req";
+
+for Line = read $F; $Line != ""; Line = read $F {
+	write _ $Line;
+}

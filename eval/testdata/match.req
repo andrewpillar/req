@@ -3,9 +3,9 @@
 StatusCode = 200;
 
 match $StatusCode {
-	200 -> print $StatusCode;
+	200 -> writeln _ $StatusCode;
 }
 
 match false {
-	_ -> print "default";
+	_ -> writeln _ "default";
 }

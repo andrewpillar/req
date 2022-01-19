@@ -681,7 +681,9 @@ func (p *parser) stmt(inRepl bool) Node {
 	}
 
 	if !p.got(_Semi) {
-		p.expected(_Semi)
+		if !inRepl {
+			p.expected(_Semi)
+		}
 	}
 	return n
 }

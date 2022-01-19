@@ -1,0 +1,3 @@
+F = open "testdata/readln.req";
+readln $F;
+readln $F;
