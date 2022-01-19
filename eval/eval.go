@@ -597,7 +597,6 @@ loop:
 			}
 		}
 	case *syntax.BranchStmt:
-		println(v.Tok.String(), "at", v.Pos().String())
 		return nil, branchErr{kind: v.Tok.String(), pos: v.Pos()}
 	}
 	return nil, nil
