@@ -312,7 +312,7 @@ func (p *parser) blockstmt() *BlockStmt {
 	}
 
 	for p.tok != _Rbrace && p.tok != _EOF {
-		n.Nodes = append(n.Nodes, p.stmt(true))
+		n.Nodes = append(n.Nodes, p.stmt(false))
 	}
 
 	p.want(_Rbrace)
