@@ -11,7 +11,7 @@ making the call,
     Token = env "GH_TOKEN";
 
     if $Token == "" {
-        fprint $Stderr "GH_TOKEN not set";
+        writeln $Stderr "GH_TOKEN not set";
         exit 1;
     }
 
@@ -25,10 +25,10 @@ making the call,
         200 -> {
             User = decode json $Resp.Body;
 
-            print "Hello {$User["login"]}";
+            writeln _ "Hello {$User["login"]}";
         }
         _   -> {
-            fprint $Stderr "Unexpected response:" $Resp.Status;
+            writeln $Stderr "Unexpected response:" $Resp.Status;
             exit 1;
         }
     }

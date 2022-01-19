@@ -6,7 +6,7 @@ Endpoint = "https://api.github.com";
 Token = env "GH_TOKEN";
 
 if $Token == "" {
-    write $Stderr "GH_TOKEN not set\n";
+    writeln $Stderr "GH_TOKEN not set";
     exit 1;
 }
 
@@ -20,10 +20,10 @@ match $Resp.StatusCode {
     200 -> {
 		User = decode json $Resp.Body;
 
-		write _ "Hello {$User["login"]}\n";
+		writeln _ "Hello {$User["login"]}";
 	}
     _   -> {
-        write $Stderr "Unexpected response: {$Resp.Status}\n";
+        writeln $Stderr "Unexpected response: {$Resp.Status}";
         exit 1;
     }
 }
