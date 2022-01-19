@@ -98,6 +98,7 @@ func Test_EvalErrors(t *testing.T) {
 		{`writeln _ $Undefined;`, syntax.Pos{Line: 1, Col: 12}},
 		{`writeln _ "Hello {$Undefined}";`, syntax.Pos{Line: 1, Col: 18}},
 		{`writeln _ "Hello {Undefined}";`, syntax.Pos{Line: 1, Col: 18}},
+		{`if true { S = "block"; } writeln _ "S = {$S}";`, syntax.Pos{Line: 1, Col: 41}},
 	}
 
 	for i, test := range tests {
