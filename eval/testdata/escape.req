@@ -1,0 +1,4 @@
+
+
+write _ "hello world\n";
+write _ "hello\tworld\n";

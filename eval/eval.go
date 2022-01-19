@@ -6,6 +6,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/andrewpillar/req/syntax"
 	"github.com/andrewpillar/req/value"
@@ -123,11 +124,42 @@ func (e *Evaluator) interpolate(c *Context, litpos syntax.Pos, s string) (value.
 	expr := make([]rune, 0, len(s))
 
 	pos := litpos
+	end := len(s)-1
 
-	for i, r := range s {
+	i := 0
+	w := 1
+
+	for i <= end {
+		r := rune(s[i])
+
+		if r >= utf8.RuneSelf {
+			r, w = utf8.DecodeRune([]byte(s[i:]))
+		}
+
+		i += w
+
+		if r == '\\' {
+			if i <= end {
+				switch s[i] {
+				case 't':
+					buf.WriteRune('\t')
+					i++
+					continue
+				case 'r':
+					buf.WriteRune('\r')
+					i++
+					continue
+				case 'n':
+					buf.WriteRune('\n')
+					i++
+					continue
+				}
+			}
+		}
+
 		if r == '{' {
 			interpolate = true
-			pos.Col += i + 1
+			pos.Col += i
 			continue
 		}
 
