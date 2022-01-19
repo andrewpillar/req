@@ -173,6 +173,13 @@ type IfStmt struct {
 	Else Node
 }
 
+// BranchStmt for break or continue statements within a for-loop.
+type BranchStmt struct {
+	node
+
+	Tok token
+}
+
 // ForStmt for executing a block code multiple times.
 // for Cond { Body }
 // for Init; Cond; Post { Body }

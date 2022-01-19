@@ -5,3 +5,20 @@ F = open "testdata/for.req";
 for Line = read $F; $Line != ""; Line = read $F {
 	write _ $Line;
 }
+
+Cont = true;
+
+for {
+	writeln _ "continue";
+
+	if $Cont {
+		Cont = false;
+		continue;
+	}
+
+	writeln _ "break";
+	break;
+}
+continue
+continue
+break

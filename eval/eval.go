@@ -278,6 +278,15 @@ func (e *Evaluator) err(pos syntax.Pos, err error) error {
 	}
 }
 
+type branchErr struct {
+	kind string
+	pos  syntax.Pos
+}
+
+func (e branchErr) Error() string {
+	return "branch:" + e.pos.String() + " - " + e.kind
+}
+
 // Eval Evaluates the given node and returns the value it Evaluates to if any.
 func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 	switch v := n.(type) {
@@ -396,13 +405,20 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			Pairs: pairs,
 		}, nil
 	case *syntax.BlockStmt:
-		// Make a copy of the current Context so we can correctly shadow any
-		// variables declared outside of the block.
-		c2 := c.Copy()
+		// Create a copy so we can unset any variables that will fall out of
+		// scope of the block.
+		orig := c.Copy()
 
 		for _, n := range v.Nodes {
-			if _, err := e.Eval(c2, n); err != nil {
+			if _, err := e.Eval(c, n); err != nil {
 				return nil, err
+			}
+		}
+
+		// Delete any variables that do not exist in the original context.
+		for name := range c.symtab {
+			if _, ok := orig.symtab[name]; !ok {
+				delete(c.symtab, name)
 			}
 		}
 		return nil, nil
@@ -546,6 +562,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			}
 		}
 
+loop:
 		for {
 			if v.Cond != nil {
 				val, err := e.Eval(c2, v.Cond)
@@ -560,15 +577,28 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			}
 
 			if _, err := e.Eval(c2, v.Body); err != nil {
+				// Feels like a hack but we'll see...
+				if branch, ok := err.(branchErr); ok {
+					switch branch.kind {
+					case "break":
+						break loop
+					case "continue":
+						goto cont
+					}
+				}
 				return nil, e.err(v.Body.Pos(), err)
 			}
 
+		cont:
 			if v.Post != nil {
 				if _, err := e.Eval(c2, v.Post); err != nil {
 					return nil, e.err(v.Pos(), err)
 				}
 			}
 		}
+	case *syntax.BranchStmt:
+		println(v.Tok.String(), "at", v.Pos().String())
+		return nil, branchErr{kind: v.Tok.String(), pos: v.Pos()}
 	}
 	return nil, nil
 }

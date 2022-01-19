@@ -660,6 +660,12 @@ func (p *parser) stmt(inRepl bool) Node {
 		if p.got(_Arrow) {
 			n = p.chain(cmd)
 		}
+	case _Break, _Continue:
+		n = &BranchStmt{
+			node: p.node(),
+			Tok:  p.tok,
+		}
+		p.next()
 	case _Match:
 		n = p.matchstmt()
 		return n
