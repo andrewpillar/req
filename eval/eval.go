@@ -317,7 +317,7 @@ type branchErr struct {
 }
 
 func (e branchErr) Error() string {
-	return "branch:" + e.pos.String() + " - " + e.kind
+	return e.pos.String() + " - " + e.kind + " outside of loop"
 }
 
 func (e *Evaluator) evalAssign(c *Context, n syntax.Node, val value.Value) error {
