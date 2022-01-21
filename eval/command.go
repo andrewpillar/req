@@ -256,7 +256,7 @@ func readln(cmd string, args []value.Value) (value.Value, error) {
 
 	for i, b := range buf[:n] {
 		if b == '\n' {
-			pos = i+1
+			pos = i + 1
 			break
 		}
 	}

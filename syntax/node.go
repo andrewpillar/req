@@ -17,13 +17,21 @@ func (n node) Pos() Pos { return n.pos }
 
 func (n node) Err(msg string) error { return n.pos.Err(msg) }
 
-// VarDecl for variable declarataions.
-// Name = Value
-type VarDecl struct {
+// ExprList is a list of comma separated expressions.
+// Node[0], Node[1], ...
+type ExprList struct {
 	node
 
-	Name  *Name
-	Value Node
+	Nodes []Node
+}
+
+// AssignStmt for assigning values to variables.
+// Left = Right
+type AssignStmt struct {
+	node
+
+	Left  Node
+	Right Node
 }
 
 // Ref for referring to previous variable declarations.

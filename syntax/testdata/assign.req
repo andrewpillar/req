@@ -1,0 +1,14 @@
+
+
+Arr = [];
+Arr[] = 1;
+Arr[0] = 2;
+
+S, I = "string", 10;
+
+Obj = (
+	Arr: [],
+);
+
+Obj["Arr"][] = 1;
+Obj["Arr"][0] = 2;

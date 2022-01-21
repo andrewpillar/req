@@ -5,23 +5,20 @@ import (
 	"testing"
 )
 
-func checkVarDecl(t *testing.T, expected, actual *VarDecl) {
-	if expected.Name != nil {
-		if actual.Name == nil {
-			t.Errorf("%s - expected Name for VarDecl\n", actual.Pos())
-			return
-		}
+func checkAssignStmt(t *testing.T, expected, actual *AssignStmt) {
+	checkNode(t, expected.Left, actual.Left)
+	checkNode(t, expected.Right, actual.Right)
+}
+
+func checkExprList(t *testing.T, expected, actual *ExprList) {
+	if len(expected.Nodes) != len(actual.Nodes) {
+		t.Errorf("%s - unexpected ExprList length, expected=%d, got=%d\n", actual.Pos(), len(expected.Nodes), len(actual.Nodes))
+		return
 	}
 
-	checkName(t, expected.Name, actual.Name)
-
-	if expected.Value != nil {
-		if actual.Value == nil {
-			t.Errorf("%s - expected Value for VarDecl\n", actual.Pos())
-			return
-		}
+	for i, n := range actual.Nodes {
+		checkNode(t, expected.Nodes[i], n)
 	}
-	checkNode(t, expected.Value, actual.Value)
 }
 
 func checkRef(t *testing.T, expected, actual *Ref) {
@@ -277,14 +274,22 @@ func checkIfStmt(t *testing.T, expected, actual *IfStmt) {
 
 func checkNode(t *testing.T, expected, actual Node) {
 	switch v := expected.(type) {
-	case *VarDecl:
-		decl, ok := actual.(*VarDecl)
+	case *ExprList:
+		list, ok := actual.(*ExprList)
 
 		if !ok {
 			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
 			return
 		}
-		checkVarDecl(t, v, decl)
+		checkExprList(t, v, list)
+	case *AssignStmt:
+		decl, ok := actual.(*AssignStmt)
+
+		if !ok {
+			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
+			return
+		}
+		checkAssignStmt(t, v, decl)
 	case *Ref:
 		ref, ok := actual.(*Ref)
 
@@ -489,39 +494,47 @@ func Test_ParseArray(t *testing.T) {
 	}
 
 	expected := []Node{
-		&VarDecl{
-			Name: &Name{Value: "ObjArray"},
-			Value: &Array{
-				Items: []Node{
-					&Object{
-						Pairs: []*KeyExpr{
-							{
-								Key: &Name{Value: "N"},
-								Value: &Lit{
-									Type:  IntLit,
-									Value: "10",
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "ObjArray"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Array{
+						Items: []Node{
+							&Object{
+								Pairs: []*KeyExpr{
+									{
+										Key: &Name{Value: "N"},
+										Value: &Lit{
+											Type:  IntLit,
+											Value: "10",
+										},
+									},
 								},
 							},
-						},
-					},
-					&Object{
-						Pairs: []*KeyExpr{
-							{
-								Key: &Name{Value: "S"},
-								Value: &Lit{
-									Type:  StringLit,
-									Value: "S",
+							&Object{
+								Pairs: []*KeyExpr{
+									{
+										Key: &Name{Value: "S"},
+										Value: &Lit{
+											Type:  StringLit,
+											Value: "S",
+										},
+									},
 								},
 							},
-						},
-					},
-					&Object{
-						Pairs: []*KeyExpr{
-							{
-								Key: &Name{Value: "T"},
-								Value: &Lit{
-									Type:  BoolLit,
-									Value: "true",
+							&Object{
+								Pairs: []*KeyExpr{
+									{
+										Key: &Name{Value: "T"},
+										Value: &Lit{
+											Type:  BoolLit,
+											Value: "true",
+										},
+									},
 								},
 							},
 						},
@@ -569,14 +582,21 @@ func Test_ParseFor(t *testing.T) {
 			},
 		},
 		&ForStmt{
-			Init: &VarDecl{
-				Name: &Name{Value: "Line"},
-				Value: &CommandStmt{
-					Name: &Name{Value: "read"},
-					Args: []Node{
-						&Ref{
-							Left: &Name{Value: "F"},
+			Init: &AssignStmt{
+				Left: &ExprList{
+					Nodes: []Node{
+						&Name{Value: "Line"},
+					},
+				},
+				Right: &ExprList{
+					Nodes: []Node{&CommandStmt{
+						Name: &Name{Value: "read"},
+						Args: []Node{
+							&Ref{
+								Left: &Name{Value: "F"},
+							},
 						},
+					},
 					},
 				},
 			},
@@ -589,26 +609,41 @@ func Test_ParseFor(t *testing.T) {
 					Type: StringLit,
 				},
 			},
-			Post: &VarDecl{
-				Name: &Name{Value: "Line"},
-				Value: &CommandStmt{
-					Name: &Name{Value: "read"},
-					Args: []Node{
-						&Ref{
-							Left: &Name{Value: "F"},
+			Post: &AssignStmt{
+				Left: &ExprList{
+					Nodes: []Node{
+						&Name{Value: "Line"},
+					},
+				},
+				Right: &ExprList{
+					Nodes: []Node{&CommandStmt{
+						Name: &Name{Value: "read"},
+						Args: []Node{
+							&Ref{
+								Left: &Name{Value: "F"},
+							},
 						},
+					},
 					},
 				},
 			},
 		},
 		&ForStmt{
-			Init: &VarDecl{
-				Name: &Name{Value: "Line"},
-				Value: &CommandStmt{
-					Name: &Name{Value: "read"},
-					Args: []Node{
-						&Ref{
-							Left: &Name{Value: "F"},
+			Init: &AssignStmt{
+				Left: &ExprList{
+					Nodes: []Node{
+						&Name{Value: "Line"},
+					},
+				},
+				Right: &ExprList{
+					Nodes: []Node{
+						&CommandStmt{
+							Name: &Name{Value: "read"},
+							Args: []Node{
+								&Ref{
+									Left: &Name{Value: "F"},
+								},
+							},
 						},
 					},
 				},
@@ -629,15 +664,174 @@ func Test_ParseFor(t *testing.T) {
 					Value: "true",
 				},
 			},
-			Post: &VarDecl{
-				Name: &Name{Value: "Line"},
-				Value: &CommandStmt{
-					Name: &Name{Value: "read"},
-					Args: []Node{
-						&Ref{
-							Left: &Name{Value: "F"},
+			Post: &AssignStmt{
+				Left: &ExprList{
+					Nodes: []Node{
+						&Name{Value: "Line"},
+					},
+				},
+				Right: &ExprList{
+					Nodes: []Node{
+						&CommandStmt{
+							Name: &Name{Value: "read"},
+							Args: []Node{
+								&Ref{
+									Left: &Name{Value: "F"},
+								},
+							},
 						},
 					},
+				},
+			},
+		},
+	}
+
+	if len(nn) != len(expected) {
+		t.Fatalf("node count mismatch, expected=%d, got=%d\n", len(expected), len(nn))
+	}
+
+	for i, n := range nn {
+		checkNode(t, expected[i], n)
+	}
+}
+
+func Test_ParseAssign(t *testing.T) {
+	nn, err := ParseFile(filepath.Join("testdata", "assign.req"), errh(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Arr"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Array{},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&IndExpr{
+						Left: &Name{Value: "Arr"},
+						Right: &Array{},
+					},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Lit{
+						Type:  IntLit,
+						Value: "1",
+					},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&IndExpr{
+						Left: &Name{Value: "Arr"},
+						Right: &Lit{
+							Type:  IntLit,
+							Value: "0",
+						},
+					},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Lit{
+						Type:  IntLit,
+						Value: "2",
+					},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "S"},
+					&Name{Value: "I"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Lit{
+						Type:  StringLit,
+						Value: "string",
+					},
+					&Lit{
+						Type:  IntLit,
+						Value: "10",
+					},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Obj"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Object{
+						Pairs: []*KeyExpr{
+							{
+								Key:   &Name{Value: "Arr"},
+								Value: &Array{},
+							},
+						},
+					},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&IndExpr{
+						Left: &IndExpr{
+							Left: &Name{Value: "Obj"},
+							Right: &Lit{
+								Type:  StringLit,
+								Value: "Arr",
+							},
+						},
+						Right: &Array{},
+					},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Lit{
+						Type:  IntLit,
+						Value: "1",
+					},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&IndExpr{
+						Left: &IndExpr{
+							Left:  &Name{Value: "Obj"},
+							Right: &Lit{Type: StringLit, Value: "Arr"},
+						},
+						Right: &Lit{Type: IntLit, Value: "0"},
+					},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Lit{Type: IntLit, Value: "2"},
 				},
 			},
 		},
@@ -713,11 +907,19 @@ func Test_ParseIf(t *testing.T) {
 				},
 			},
 		},
-		&VarDecl{
-			Name: &Name{Value: "StatusCode"},
-			Value: &Lit{
-				Type:  IntLit,
-				Value: "204",
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "StatusCode"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Lit{
+						Type:  IntLit,
+						Value: "204",
+					},
+				},
 			},
 		},
 		&IfStmt{
@@ -786,45 +988,77 @@ func Test_Parser(t *testing.T) {
 	}
 
 	expected := []Node{
-		&VarDecl{
-			Name: &Name{Value: "Stdout"},
-			Value: &CommandStmt{
-				Name: &Name{Value: "open"},
-				Args: []Node{
-					&Lit{
-						Type:  StringLit,
-						Value: "/dev/stdout",
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Stdout"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&CommandStmt{
+						Name: &Name{Value: "open"},
+						Args: []Node{
+							&Lit{
+								Type:  StringLit,
+								Value: "/dev/stdout",
+							},
+						},
 					},
 				},
 			},
 		},
-		&VarDecl{
-			Name: &Name{Value: "Stderr"},
-			Value: &CommandStmt{
-				Name: &Name{Value: "open"},
-				Args: []Node{
-					&Lit{
-						Type:  StringLit,
-						Value: "/dev/stderr",
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Stderr"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&CommandStmt{
+						Name: &Name{Value: "open"},
+						Args: []Node{
+							&Lit{
+								Type:  StringLit,
+								Value: "/dev/stderr",
+							},
+						},
 					},
 				},
 			},
 		},
-		&VarDecl{
-			Name: &Name{Value: "Endpoint"},
-			Value: &Lit{
-				Type:  StringLit,
-				Value: "https://api.github.com",
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Endpoint"},
+				},
 			},
-		},
-		&VarDecl{
-			Name: &Name{Value: "Token"},
-			Value: &CommandStmt{
-				Name: &Name{Value: "env"},
-				Args: []Node{
+			Right: &ExprList{
+				Nodes: []Node{
 					&Lit{
 						Type:  StringLit,
-						Value: "GH_TOKEN",
+						Value: "https://api.github.com",
+					},
+				},
+			},
+		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Token"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&CommandStmt{
+						Name: &Name{Value: "env"},
+						Args: []Node{
+							&Lit{
+								Type:  StringLit,
+								Value: "GH_TOKEN",
+							},
+						},
 					},
 				},
 			},
@@ -838,39 +1072,47 @@ func Test_Parser(t *testing.T) {
 				Right: &Lit{Type: StringLit},
 			},
 		},
-		&VarDecl{
-			Name: &Name{Value: "Resp"},
-			Value: &ChainExpr{
-				Commands: []*CommandStmt{
-					{
-						Name: &Name{Value: "GET"},
-						Args: []Node{
-							&Lit{
-								Type:  StringLit,
-								Value: "{$Endpoint}/user",
-							},
-							&Object{
-								Pairs: []*KeyExpr{
-									{
-										Key: &Name{Value: "Authorization"},
-										Value: &Lit{
-											Type:  StringLit,
-											Value: "Bearer {$Token}",
-										},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Resp"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&ChainExpr{
+						Commands: []*CommandStmt{
+							{
+								Name: &Name{Value: "GET"},
+								Args: []Node{
+									&Lit{
+										Type:  StringLit,
+										Value: "{$Endpoint}/user",
 									},
-									{
-										Key: &Name{Value: "Content-Type"},
-										Value: &Lit{
-											Type:  StringLit,
-											Value: "application/json; charset=utf-8",
+									&Object{
+										Pairs: []*KeyExpr{
+											{
+												Key: &Name{Value: "Authorization"},
+												Value: &Lit{
+													Type:  StringLit,
+													Value: "Bearer {$Token}",
+												},
+											},
+											{
+												Key: &Name{Value: "Content-Type"},
+												Value: &Lit{
+													Type:  StringLit,
+													Value: "application/json; charset=utf-8",
+												},
+											},
 										},
 									},
 								},
 							},
+							{
+								Name: &Name{Value: "send"},
+							},
 						},
-					},
-					{
-						Name: &Name{Value: "send"},
 					},
 				},
 			},
@@ -890,16 +1132,24 @@ func Test_Parser(t *testing.T) {
 					},
 					Then: &BlockStmt{
 						Nodes: []Node{
-							&VarDecl{
-								Name: &Name{Value: "User"},
-								Value: &CommandStmt{
-									Name: &Name{Value: "decode"},
-									Args: []Node{
-										&Name{Value: "json"},
-										&Ref{
-											Left: &DotExpr{
-												Left:  &Name{Value: "Resp"},
-												Right: &Name{Value: "Body"},
+							&AssignStmt{
+								Left: &ExprList{
+									Nodes: []Node{
+										&Name{Value: "User"},
+									},
+								},
+								Right: &ExprList{
+									Nodes: []Node{
+										&CommandStmt{
+											Name: &Name{Value: "decode"},
+											Args: []Node{
+												&Name{Value: "json"},
+												&Ref{
+													Left: &DotExpr{
+														Left:  &Name{Value: "Resp"},
+														Right: &Name{Value: "Body"},
+													},
+												},
 											},
 										},
 									},

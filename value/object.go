@@ -61,6 +61,29 @@ func (o Object) Get(v Value) (Value, error) {
 	return val, nil
 }
 
+// Set sets the value at the given key with the given value.
+func (o Object) Set(key, val Value) error {
+	str, err := ToString(key)
+
+	if err != nil {
+		return err
+	}
+
+	val0, ok := o.Pairs[str.Value]
+
+	if !ok {
+		o.Pairs[str.Value] = val
+		return nil
+	}
+
+	if err := CompareType(val, val0); err != nil {
+		return err
+	}
+
+	o.Pairs[str.Value] = val
+	return nil
+}
+
 // String formats the object into a string. Each key-value pair is space
 // spearated and wrapped in ( ). The underlying values in the array will have
 // the String method called on them for formatting.

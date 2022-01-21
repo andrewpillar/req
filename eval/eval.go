@@ -4,6 +4,7 @@ package eval
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"strconv"
 	"unicode/utf8"
@@ -26,7 +27,7 @@ func (c *Context) Put(name string, val value.Value) {
 }
 
 func errUndefined(name string) error {
-	return errors.New("undefined: $" + name)
+	return errors.New("undefined: " + name)
 }
 
 // Get returns an valect of the given name. If no valect exists, then this
@@ -124,7 +125,7 @@ func (e *Evaluator) interpolate(c *Context, litpos syntax.Pos, s string) (value.
 	expr := make([]rune, 0, len(s))
 
 	pos := litpos
-	end := len(s)-1
+	end := len(s) - 1
 
 	i := 0
 	w := 1
@@ -319,28 +320,87 @@ func (e branchErr) Error() string {
 	return "branch:" + e.pos.String() + " - " + e.kind
 }
 
+func (e *Evaluator) evalAssign(c *Context, n syntax.Node, val value.Value) error {
+	switch v := n.(type) {
+	case *syntax.Name:
+		orig, _ := c.Get(v.Value)
+
+		if orig != nil {
+			if err := value.CompareType(val, orig); err != nil {
+				return err
+			}
+		}
+
+		c.Put(v.Value, val)
+		return nil
+	case *syntax.IndExpr:
+		left, err := e.Eval(c, v.Left)
+
+		if err != nil {
+			return err
+		}
+
+		if name, ok := left.(value.Name); ok {
+			left, err = c.Get(name.Value)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		index, err := value.ToIndex(left)
+
+		if err != nil {
+			return err
+		}
+
+		key, err := e.Eval(c, v.Right)
+
+		if err != nil {
+			return err
+		}
+
+		if err := index.Set(key, val); err != nil {
+			return err
+		}
+		return nil
+	}
+	return errors.New("unexpected expression")
+}
+
 // Eval Evaluates the given node and returns the value it Evaluates to if any.
 func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 	switch v := n.(type) {
-	case *syntax.VarDecl:
-		val, err := e.Eval(c, v.Value)
+	case *syntax.AssignStmt:
+		list, ok := v.Left.(*syntax.ExprList)
 
-		if err != nil {
-			return nil, e.err(v.Value.Pos(), err)
+		if !ok {
+			return nil, e.err(v.Left.Pos(), errors.New("assignment is not to a list of variables"))
 		}
 
-		if val == nil {
-			return nil, e.err(v.Value.Pos(), errors.New("does not Evaluate to value"))
+		right, ok := v.Right.(*syntax.ExprList)
+
+		if !ok {
+			return nil, e.err(v.Right.Pos(), errors.New("assignment is not from a list of expressions"))
 		}
 
-		val2, _ := c.Get(v.Name.Value)
+		if len(list.Nodes) != len(right.Nodes) {
+			return nil, e.err(v.Pos(), fmt.Errorf("assignment mismatch: %d variable(s) but %d value(s)", len(right.Nodes), len(list.Nodes)))
+		}
 
-		if val2 != nil {
-			if err := value.CompareType(val, val2); err != nil {
+		for i, n := range list.Nodes {
+			valnod := right.Nodes[i]
+
+			val, err := e.Eval(c, valnod)
+
+			if err != nil {
+				return nil, e.err(valnod.Pos(), err)
+			}
+
+			if err := e.evalAssign(c, n, val); err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
 		}
-		c.Put(v.Name.Value, val)
 	case *syntax.Ref:
 		switch v := v.Left.(type) {
 		case *syntax.Name:
@@ -594,7 +654,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			}
 		}
 
-loop:
+	loop:
 		for {
 			if v.Cond != nil {
 				val, err := e.Eval(c2, v.Cond)

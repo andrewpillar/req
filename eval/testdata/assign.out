@@ -1,0 +1,5 @@
+string 10 true [1 2 3 4] (Arr:[] Key:value)
+[0 2 3 4 5]
+(Arr:[] Key:string)
+1
+2

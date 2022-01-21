@@ -77,6 +77,8 @@ type Index interface {
 	Has(Value) bool
 
 	Get(Value) (Value, error)
+
+	Set(Value, Value) error
 }
 
 // ToIndex attemps to assert the given Value to an Index.

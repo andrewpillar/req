@@ -89,6 +89,38 @@ func (a *Array) Get(v Value) (Value, error) {
 	return a.Items[i], nil
 }
 
+// Set sets the value at the given key with the given value.
+func (a *Array) Set(key, val Value) error {
+	if _, ok := key.(*Array); ok {
+		if len(a.Items) > 0 {
+			if err := CompareType(val, a.Items[0]); err != nil {
+				return err
+			}
+		}
+		a.Items = append(a.Items, val)
+		return nil
+	}
+
+	i64, err := ToInt(key)
+
+	if err != nil {
+		return err
+	}
+
+	i := int(i64.Value)
+
+	if i < 0 || i > len(a.Items)-1 {
+		return errors.New("assignment out of bounds")
+	}
+
+	if err := CompareType(val, a.Items[i]); err != nil {
+		return err
+	}
+
+	a.Items[i] = val
+	return nil
+}
+
 // String formats the array into a string. Each item in the array is space
 // separated and wrapped in [ ]. The underlying items in the array will have
 // the String method called on them for formatting.

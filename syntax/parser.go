@@ -162,6 +162,51 @@ func (p *parser) name() *Name {
 	return n
 }
 
+// nameExpr will parse either a name expression, or an index expression. This
+// would be used for the left-hand side of an assignment statement, where you
+// want to assign to an indexed value, for example Arr[0] = "val".
+func (p *parser) nameExpr() Node {
+	name := p.name()
+
+	if p.tok != _Lbrack {
+		return name
+	}
+
+	var n Node = name
+
+	for {
+		pos := p.pos
+
+		if p.tok != _Lbrack {
+			break
+		}
+
+		p.next()
+
+		ind := &IndExpr{
+			node: node{pos: pos},
+			Left: n,
+		}
+
+		switch p.tok {
+		case _Literal:
+			ind.Right = p.literal()
+		case _Ref:
+			ind.Right = p.ref()
+		case _Rbrack:
+			ind.Right = &Array{}
+		default:
+			p.unexpected(p.tok)
+			p.next()
+		}
+
+		p.want(_Rbrack)
+
+		n = ind
+	}
+	return n
+}
+
 func (p *parser) literal() *Lit {
 	if p.tok != _Literal {
 		return nil
@@ -438,13 +483,13 @@ func (p *parser) ifstmt() *IfStmt {
 func (p *parser) simplestmt() Node {
 	switch p.tok {
 	case _Name:
-		name := p.name()
+		name := p.nameExpr()
 
-		if p.tok != _Assign {
+		if p.tok != _Assign && p.tok != _Comma {
 			p.unexpected(p.tok)
 			p.advance(_Semi)
 		}
-		return p.vardecl(name)
+		return p.assign(name)
 	case _Literal:
 		return p.literal()
 	case _Ref:
@@ -461,13 +506,13 @@ func (p *parser) initExpr() Node {
 
 	switch p.tok {
 	case _Name:
-		name := p.name()
+		name := p.nameExpr()
 
-		if p.tok != _Assign {
+		if p.tok != _Assign && p.tok != _Comma {
 			p.unexpected(p.tok)
 			p.advance(_Semi)
 		}
-		return p.vardecl(name)
+		return p.assign(name)
 	case _Literal:
 		n = p.literal()
 	case _Ref:
@@ -624,18 +669,36 @@ func (p *parser) command(name *Name) *CommandStmt {
 	return n
 }
 
-func (p *parser) vardecl(name *Name) *VarDecl {
-	n := &VarDecl{
-		node: name.node,
-		Name: name,
+func (p *parser) assign(first Node) Node {
+	n := &AssignStmt{
+		node: node{pos: first.Pos()},
+	}
+
+	left := []Node{first}
+
+	for p.got(_Comma) {
+		left = append(left, p.nameExpr())
+	}
+
+	n.Left = &ExprList{
+		node:  n.node,
+		Nodes: left,
 	}
 
 	if !p.got(_Assign) {
 		return nil
 	}
 
-	n.Value = p.expr()
+	right := []Node{p.expr()}
 
+	for p.got(_Comma) {
+		right = append(right, p.expr())
+	}
+
+	n.Right = &ExprList{
+		node:  node{pos: right[0].Pos()},
+		Nodes: right,
+	}
 	return n
 }
 
@@ -647,11 +710,21 @@ func (p *parser) stmt(inRepl bool) Node {
 
 	switch p.tok {
 	case _Name:
-		name := p.name()
+		expr := p.nameExpr()
 
-		if p.tok == _Assign {
-			n = p.vardecl(name)
+		if p.tok == _Assign || p.tok == _Comma {
+			n = p.assign(expr)
 			break
+		}
+
+		var name *Name
+
+		switch v := expr.(type) {
+		case *IndExpr:
+			p.errAt(name.Pos(), "unassigned index expression")
+			p.advance(_Semi)
+		case *Name:
+			name = v
 		}
 
 		cmd := p.command(name)
