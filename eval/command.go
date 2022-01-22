@@ -995,13 +995,15 @@ func decodeJson(cmd string, args []value.Value) (value.Value, error) {
 
 	switch v := arg0.(type) {
 	case value.String:
-		println(v.Value)
 		r = strings.NewReader(v.Value)
 	case value.Stream:
 		r = v
 		stream = v
 	default:
-		return nil, errors.New("cannot decode " + value.Type(arg0))
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: errors.New("cannot decode " + value.Type(arg0)),
+		}
 	}
 
 	val, err := value.DecodeJSON(r)
