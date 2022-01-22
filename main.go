@@ -85,7 +85,11 @@ func repl(ctx context.Context, w io.Writer, r io.Reader) {
 				val, err := e.Eval(&c, n)
 
 				if err != nil {
-					fmt.Fprintln(w, errors.Unwrap(err))
+					if evalerr, ok := err.(*eval.Error); ok {
+						fmt.Fprintln(w, evalerr.Err)
+						continue
+					}
+					fmt.Fprintln(w, err)
 					continue
 				}
 
