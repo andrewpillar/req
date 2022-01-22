@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"hash/fnv"
+	"io"
 	"strconv"
 	"unicode/utf8"
 

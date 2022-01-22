@@ -785,7 +785,7 @@ func Test_ParseAssign(t *testing.T) {
 			Left: &ExprList{
 				Nodes: []Node{
 					&IndExpr{
-						Left: &Name{Value: "Arr"},
+						Left:  &Name{Value: "Arr"},
 						Right: &Array{},
 					},
 				},

@@ -513,7 +513,6 @@ func (p *parser) simpleStmt(keyword token) Node {
 			}
 		}
 
-
 		right := []Node{
 			p.expr(),
 		}
@@ -523,8 +522,8 @@ func (p *parser) simpleStmt(keyword token) Node {
 		}
 
 		return &AssignStmt{
-			node:  node{pos: pos},
-			Left:  &ExprList{
+			node: node{pos: pos},
+			Left: &ExprList{
 				Nodes: exprs,
 			},
 			Right: &ExprList{

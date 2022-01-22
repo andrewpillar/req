@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"hash/fnv"
+	"io"
 
 	"github.com/andrewpillar/req/syntax"
 )
@@ -126,7 +126,7 @@ func (a *Array) Set(strict bool, key, val Value) error {
 }
 
 func (a *Array) Next() (Value, Value, error) {
-	if a.curr > len(a.Items) - 1 {
+	if a.curr > len(a.Items)-1 {
 		// Reset the current for the next time the value is iterated over.
 		a.curr = 0
 

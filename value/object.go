@@ -93,7 +93,7 @@ func (o *Object) Set(strict bool, key, val Value) error {
 }
 
 func (o *Object) Next() (Value, Value, error) {
-	if o.curr > len(o.Order) - 1 {
+	if o.curr > len(o.Order)-1 {
 		// Reset the current for the next time the value is iterated over.
 		o.curr = 0
 
@@ -103,7 +103,7 @@ func (o *Object) Next() (Value, Value, error) {
 	key := o.Order[o.curr]
 	o.curr++
 
-	return String{Value:key}, o.Pairs[key], nil
+	return String{Value: key}, o.Pairs[key], nil
 }
 
 // String formats the object into a string. Each key-value pair is space

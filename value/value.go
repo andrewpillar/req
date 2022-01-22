@@ -83,7 +83,7 @@ func ToIterable(v Value) (Iterable, error) {
 	i, ok := v.(Iterable)
 
 	if !ok {
-		return nil, errors.New("type "+ v.valueType().String() + " is not an iterable")
+		return nil, errors.New("type " + v.valueType().String() + " is not an iterable")
 	}
 	return i, nil
 }
