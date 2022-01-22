@@ -124,6 +124,7 @@ func (o *Object) String() string {
 		if i != end {
 			buf.WriteByte(' ')
 		}
+		i++
 	}
 
 	buf.WriteByte(')')

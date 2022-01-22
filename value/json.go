@@ -30,10 +30,12 @@ func decodeJson(a interface{}) Value {
 		val = arr
 	case map[string]interface{}:
 		obj := &Object{
+			Order: make([]string, 0, len(v)),
 			Pairs: make(map[string]Value),
 		}
 
 		for k, a := range v {
+			obj.Order = append(obj.Order, k)
 			obj.Pairs[k] = decodeJson(a)
 		}
 		val = obj
