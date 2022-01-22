@@ -104,6 +104,7 @@ type LitType uint
 const (
 	StringLit LitType = iota + 1 // string
 	IntLit                       // int
+	FloatLit                     // float
 	BoolLit                      // bool
 )
 

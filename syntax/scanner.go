@@ -50,13 +50,33 @@ func (sc *scanner) number() {
 
 	r := sc.get()
 
-	for isDigit(r) {
+	isFloat := false
+	typ := IntLit
+
+	for {
+		if !isDigit(r) {
+			if r == '.' {
+				if isFloat {
+					sc.err("invalid point in float")
+					break
+				}
+
+				isFloat = true
+				r = sc.get()
+				continue
+			}
+			break
+		}
 		r = sc.get()
 	}
 	sc.unget()
 
+	if isFloat {
+		typ = FloatLit
+	}
+
 	sc.tok = _Literal
-	sc.typ = IntLit
+	sc.typ = typ
 	sc.lit = sc.stopLit()
 }
 

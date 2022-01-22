@@ -12,7 +12,11 @@ func decodeJson(a interface{}) Value {
 	case string:
 		val = String{Value: v}
 	case float64:
-		val = Int{Value: int64(v)}
+		if v == float64(int64(v)) {
+			val = Int{Value: int64(v)}
+			break
+		}
+		val = Float{Value: v}
 	case bool:
 		val = Bool{Value: v}
 	case []interface{}:

@@ -10,12 +10,13 @@ func _() {
 	var x [1]struct{}
 	_ = x[StringLit-1]
 	_ = x[IntLit-2]
-	_ = x[BoolLit-3]
+	_ = x[FloatLit-3]
+	_ = x[BoolLit-4]
 }
 
-const _LitType_name = "stringintbool"
+const _LitType_name = "stringintfloatbool"
 
-var _LitType_index = [...]uint8{0, 6, 9, 13}
+var _LitType_index = [...]uint8{0, 6, 9, 14, 18}
 
 func (i LitType) String() string {
 	i -= 1

@@ -528,6 +528,9 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 		case syntax.IntLit:
 			i, _ := strconv.ParseInt(v.Value, 10, 64)
 			return value.Int{Value: i}, nil
+		case syntax.FloatLit:
+			f, _ := strconv.ParseFloat(v.Value, 64)
+			return value.Float{Value: f}, nil
 		case syntax.BoolLit:
 			b := true
 
