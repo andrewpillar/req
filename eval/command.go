@@ -1068,10 +1068,10 @@ func decodeUrl(cmd string, args []value.Value) (value.Value, error) {
 				continue
 			}
 
-			if '0' >= it[0] && it[0] <= '9' {
+			if '0' <= it[0] && it[0] <= '9' {
 				i, err := strconv.ParseInt(it, 10, 64)
 
-				if err != nil {
+				if err == nil {
 					vals = append(vals, value.Int{Value: i})
 					continue
 				}
