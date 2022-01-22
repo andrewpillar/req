@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"hash/fnv"
 	"strconv"
 	"unicode/utf8"
@@ -320,14 +321,25 @@ func (e branchErr) Error() string {
 	return e.pos.String() + " - " + e.kind + " outside of loop"
 }
 
-func (e *Evaluator) evalAssign(c *Context, n syntax.Node, val value.Value) error {
+// evalAssign evaluates the node and assigns the given value to that node. If
+// the given node is a Name then it simply assigns the value directly to the
+// Name's value in the symbol table. If the node is an IndExpr then the
+// expression is evaluated to find the index being assigned to, and evaluates
+// the key in the index to where the value is to be assigned.
+func (e *Evaluator) evalAssign(c *Context, strict bool, n syntax.Node, val value.Value) error {
 	switch v := n.(type) {
 	case *syntax.Name:
+		if v.Value == "_" {
+			return nil
+		}
+
 		orig, _ := c.Get(v.Value)
 
-		if orig != nil {
-			if err := value.CompareType(val, orig); err != nil {
-				return err
+		if strict {
+			if orig != nil {
+				if err := value.CompareType(val, orig); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -360,12 +372,71 @@ func (e *Evaluator) evalAssign(c *Context, n syntax.Node, val value.Value) error
 			return err
 		}
 
-		if err := index.Set(key, val); err != nil {
+		if err := index.Set(strict, key, val); err != nil {
 			return err
 		}
 		return nil
 	}
 	return errors.New("unexpected expression")
+}
+
+func (e *Evaluator) evalRange(c *Context, n *syntax.Range, body *syntax.BlockStmt) (value.Value, error) {
+	right, err := e.Eval(c, n.Right)
+
+	if err != nil {
+		return nil, err
+	}
+
+	iter, err := value.ToIterable(right)
+
+	if err != nil {
+		return nil, e.err(n.Right.Pos(), err)
+	}
+
+	list, ok := n.Left.(*syntax.ExprList)
+
+	if !ok {
+		return nil, e.err(n.Pos(), errors.New("assignment is not to a list of variables"))
+	}
+
+	l := len(list.Nodes)
+
+	if l > 2 {
+		return nil, e.err(n.Pos(), errors.New("assignment mismatch: can only assign at most 2 variables during iteration"))
+	}
+
+	key, val, err := iter.Next()
+
+loop:
+	for !errors.Is(err, io.EOF) {
+		if l >= 1 {
+			if err := e.evalAssign(c, false, list.Nodes[0], key); err != nil {
+				return nil, e.err(n.Pos(), err)
+			}
+
+			if l > 1 {
+				if err := e.evalAssign(c, false, list.Nodes[1], val); err != nil {
+					return nil, e.err(list.Nodes[1].Pos(), err)
+				}
+			}
+		}
+
+		if _, err := e.Eval(c, body); err != nil {
+			if branch, ok := err.(branchErr); ok {
+				switch branch.kind {
+				case "break":
+					break loop
+				case "continue":
+					goto cont
+				}
+			}
+			return nil, e.err(body.Pos(), err)
+		}
+
+	cont:
+		key, val, err = iter.Next()
+	}
+	return nil, nil
 }
 
 // Eval Evaluates the given node and returns the value it Evaluates to if any.
@@ -397,7 +468,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 				return nil, e.err(valnod.Pos(), err)
 			}
 
-			if err := e.evalAssign(c, n, val); err != nil {
+			if err := e.evalAssign(c, true, n, val); err != nil {
 				return nil, e.err(v.Pos(), err)
 			}
 		}
@@ -483,6 +554,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 		return arr, nil
 	case *syntax.Object:
 		pairs := make(map[string]value.Value)
+		order := make([]string, 0, len(v.Pairs))
 
 		for _, n := range v.Pairs {
 			val, err := e.Eval(c, n.Value)
@@ -491,9 +563,11 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 				return nil, err
 			}
 			pairs[n.Key.Value] = val
+			order = append(order, n.Key.Value)
 		}
 
-		return value.Object{
+		return &value.Object{
+			Order: order,
 			Pairs: pairs,
 		}, nil
 	case *syntax.BlockStmt:
@@ -649,6 +723,10 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 		c2 := c.Copy()
 
 		if v.Init != nil {
+			if rng, ok := v.Init.(*syntax.Range); ok {
+				return e.evalRange(c2, rng, v.Body)
+			}
+
 			if _, err := e.Eval(c2, v.Init); err != nil {
 				return nil, e.err(v.Pos(), err)
 			}

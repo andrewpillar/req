@@ -480,39 +480,57 @@ func (p *parser) ifstmt() *IfStmt {
 	return n
 }
 
-func (p *parser) simplestmt() Node {
-	switch p.tok {
-	case _Name:
-		name := p.nameExpr()
-
-		if p.tok != _Assign && p.tok != _Comma {
-			p.unexpected(p.tok)
-			p.advance(_Semi)
-		}
-		return p.assign(name)
-	case _Literal:
-		return p.literal()
-	case _Ref:
-		return p.ref()
-	default:
-		p.unexpected(p.tok)
-		p.advance(_Semi)
-	}
-	return nil
-}
-
-func (p *parser) initExpr() Node {
+func (p *parser) simpleStmt(keyword token) Node {
 	var n Node
 
+	pos := p.pos
+
 	switch p.tok {
 	case _Name:
-		name := p.nameExpr()
+		exprs := []Node{
+			p.nameExpr(),
+		}
 
-		if p.tok != _Assign && p.tok != _Comma {
+		for p.got(_Comma) {
+			exprs = append(exprs, p.nameExpr())
+		}
+
+		if !p.got(_Assign) {
 			p.unexpected(p.tok)
 			p.advance(_Semi)
+			return n
 		}
-		return p.assign(name)
+
+		if keyword == _For && p.tok == _Range {
+			p.next()
+
+			return &Range{
+				node: p.node(),
+				Left: &ExprList{
+					Nodes: exprs,
+				},
+				Right: p.operand(),
+			}
+		}
+
+
+		right := []Node{
+			p.expr(),
+		}
+
+		for p.got(_Comma) {
+			right = append(right, p.expr())
+		}
+
+		return &AssignStmt{
+			node:  node{pos: pos},
+			Left:  &ExprList{
+				Nodes: exprs,
+			},
+			Right: &ExprList{
+				Nodes: right,
+			},
+		}
 	case _Literal:
 		n = p.literal()
 	case _Ref:
@@ -541,7 +559,11 @@ func (p *parser) forstmt() *ForStmt {
 	}
 
 	if p.tok != _Lbrace {
-		n.Init = p.initExpr()
+		n.Init = p.simpleStmt(_For)
+
+		if _, ok := n.Init.(*Range); ok {
+			goto body
+		}
 
 		if !p.got(_Semi) {
 			if p.tok == _Lbrace {
@@ -556,7 +578,7 @@ func (p *parser) forstmt() *ForStmt {
 
 		n.Cond = p.expr()
 		p.want(_Semi)
-		n.Post = p.simplestmt()
+		n.Post = p.simpleStmt(0)
 	}
 
 body:
@@ -669,7 +691,7 @@ func (p *parser) command(name *Name) *CommandStmt {
 	return n
 }
 
-func (p *parser) assign(first Node) Node {
+func (p *parser) assignStmt(first Node) *AssignStmt {
 	n := &AssignStmt{
 		node: node{pos: first.Pos()},
 	}
@@ -713,7 +735,7 @@ func (p *parser) stmt(inRepl bool) Node {
 		expr := p.nameExpr()
 
 		if p.tok == _Assign || p.tok == _Comma {
-			n = p.assign(expr)
+			n = p.assignStmt(expr)
 			break
 		}
 

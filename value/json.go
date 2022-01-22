@@ -29,7 +29,7 @@ func decodeJson(a interface{}) Value {
 
 		val = arr
 	case map[string]interface{}:
-		obj := Object{
+		obj := &Object{
 			Pairs: make(map[string]Value),
 		}
 

@@ -502,7 +502,7 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
-	var obj value.Object
+	var obj *value.Object
 
 	if len(args) > 1 {
 		obj, err = value.ToObject(args[1])
@@ -537,16 +537,18 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 		return nil, err
 	}
 
-	for key, val := range obj.Pairs {
-		str, err := value.ToString(val)
+	if obj != nil {
+		for key, val := range obj.Pairs {
+			str, err := value.ToString(val)
 
-		if err != nil {
-			return nil, &CommandError{
-				Cmd: cmd,
-				Err: err,
+			if err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
 			}
+			req.Header.Set(key, str.Value)
 		}
-		req.Header.Set(key, str.Value)
 	}
 
 	if val := req.Header.Get("User-Agent"); val == "" {
@@ -823,7 +825,7 @@ func encodeJson(cmd string, args []value.Value) (value.Value, error) {
 
 	switch arg0.(type) {
 	case *value.Array:
-	case value.Object:
+	case *value.Object:
 	default:
 		return nil, &CommandError{
 			Cmd: cmd,
@@ -948,10 +950,6 @@ func decodeFormData(cmd string, args []value.Value) (value.Value, error) {
 
 	r := multipart.NewReader(f.Data, params["boundary"])
 
-	obj := value.Object{
-		Pairs: make(map[string]value.Value),
-	}
-
 	form, err := r.ReadForm(maxFormMemory)
 
 	if err != nil {
@@ -961,7 +959,13 @@ func decodeFormData(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
+	obj := &value.Object{
+		Order: make([]string, 0, len(form.Value)),
+		Pairs: make(map[string]value.Value),
+	}
+
 	for k, v := range form.Value {
+		obj.Order = append(obj.Order, k)
 		obj.Pairs[k] = value.String{
 			Value: v[0],
 		}
@@ -1040,7 +1044,8 @@ func decodeUrl(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
-	obj := value.Object{
+	obj := &value.Object{
+		Order: make([]string, 0, len(vals)),
 		Pairs: make(map[string]value.Value),
 	}
 
@@ -1070,6 +1075,8 @@ func decodeUrl(cmd string, args []value.Value) (value.Value, error) {
 			}
 			vals = append(vals, value.String{Value: it})
 		}
+
+		obj.Order = append(obj.Order, k)
 
 		if len(vals) > 1 {
 			arr := &value.Array{Items: vals}

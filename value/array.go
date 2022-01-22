@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"hash/fnv"
 
 	"github.com/andrewpillar/req/syntax"
@@ -12,6 +13,9 @@ import (
 // Array holds a list of values, and an underlying hash of each of the items
 // in the array. This hash is used to perform in operations on the array.
 type Array struct {
+	curr  int
+	atEOF bool
+
 	set   map[uint32]struct{}
 	Items []Value
 }
@@ -90,7 +94,7 @@ func (a *Array) Get(v Value) (Value, error) {
 }
 
 // Set sets the value at the given key with the given value.
-func (a *Array) Set(key, val Value) error {
+func (a *Array) Set(strict bool, key, val Value) error {
 	if _, ok := key.(*Array); ok {
 		if len(a.Items) > 0 {
 			if err := CompareType(val, a.Items[0]); err != nil {
@@ -119,6 +123,22 @@ func (a *Array) Set(key, val Value) error {
 
 	a.Items[i] = val
 	return nil
+}
+
+func (a *Array) Next() (Value, Value, error) {
+	if a.curr > len(a.Items) - 1 {
+		// Reset the current for the next time the value is iterated over.
+		a.curr = 0
+
+		return nil, nil, io.EOF
+	}
+
+	it := a.Items[a.curr]
+	i := a.curr
+
+	a.curr++
+
+	return Int{Value: int64(i)}, it, nil
 }
 
 // String formats the array into a string. Each item in the array is space

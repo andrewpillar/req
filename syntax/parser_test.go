@@ -10,6 +10,11 @@ func checkAssignStmt(t *testing.T, expected, actual *AssignStmt) {
 	checkNode(t, expected.Right, actual.Right)
 }
 
+func checkRange(t *testing.T, expected, actual *Range) {
+	checkNode(t, expected.Left, actual.Left)
+	checkNode(t, expected.Right, actual.Right)
+}
+
 func checkExprList(t *testing.T, expected, actual *ExprList) {
 	if len(expected.Nodes) != len(actual.Nodes) {
 		t.Errorf("%s - unexpected ExprList length, expected=%d, got=%d\n", actual.Pos(), len(expected.Nodes), len(actual.Nodes))
@@ -410,6 +415,14 @@ func checkNode(t *testing.T, expected, actual Node) {
 			return
 		}
 		checkForStmt(t, v, for_)
+	case *Range:
+		range_, ok := actual.(*Range)
+
+		if !ok {
+			t.Errorf("%s - unexpected node type, expected=%T, got=%T\n", actual.Pos(), v, actual)
+			return
+		}
+		checkRange(t, v, range_)
 	default:
 		t.Errorf("%s - unknown node type=%T\n", actual.Pos(), v)
 	}
@@ -538,6 +551,59 @@ func Test_ParseArray(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(nn) != len(expected) {
+		t.Fatalf("node count mismatch, expected=%d, got=%d\n", len(expected), len(nn))
+	}
+
+	for i, n := range nn {
+		checkNode(t, expected[i], n)
+	}
+}
+
+func Test_ParseRange(t *testing.T) {
+	nn, err := ParseFile(filepath.Join("testdata", "range.req"), errh(t))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		&ForStmt{
+			Init: &Range{
+				Left: &ExprList{
+					Nodes: []Node{
+						&Name{Value: "_"},
+						&Name{Value: "N"},
+					},
+				},
+				Right: &Array{
+					Items: []Node{
+						&Lit{Type: IntLit, Value: "1"},
+						&Lit{Type: IntLit, Value: "2"},
+						&Lit{Type: IntLit, Value: "3"},
+						&Lit{Type: IntLit, Value: "4"},
+					},
+				},
+			},
+		},
+		&ForStmt{
+			Init: &Range{
+				Left: &ExprList{
+					Nodes: []Node{
+						&Name{Value: "I"},
+					},
+				},
+				Right: &Array{
+					Items: []Node{
+						&Lit{Type: StringLit, Value: "foo"},
+						&Lit{Type: StringLit, Value: "bar"},
+						&Lit{Type: StringLit, Value: "zap"},
 					},
 				},
 			},

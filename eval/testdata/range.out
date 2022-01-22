@@ -1,0 +1,14 @@
+N = 1
+N = 2
+N = 3
+N = 4
+I = 0, N = 1
+I = 1, N = 2
+I = 2, N = 3
+I = 3, N = 4
+I = 0, S = foo
+I = 1, S = bar
+I = 2, S = zap
+K = S, V = string
+K = A, V = [1 2 3 4]
+K = I, V = 10

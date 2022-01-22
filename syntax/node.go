@@ -199,3 +199,12 @@ type ForStmt struct {
 	Post Node
 	Body *BlockStmt
 }
+
+// Range for iterating over iterable values such as arrays and objects.
+// Left = range Right
+type Range struct {
+	node
+
+	Left  Node
+	Right Node
+}

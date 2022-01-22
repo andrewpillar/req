@@ -1,0 +1,9 @@
+
+
+for _, N = range [1, 2, 3, 4] {
+
+}
+
+for I = range ["foo", "bar", "zap"] {
+
+}

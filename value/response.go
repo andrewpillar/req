@@ -31,11 +31,16 @@ func (r Response) Select(val Value) (Value, error) {
 		return Int{Value: int64(r.StatusCode)}, nil
 	case "Header":
 		pairs := make(map[string]Value)
+		order := make([]string, 0, len(r.Header))
 
 		for k, v := range r.Header {
+			order = append(order, k)
 			pairs[k] = String{Value: v[0]}
 		}
-		return Object{Pairs: pairs}, nil
+		return &Object{
+			Order: order,
+			Pairs: pairs,
+		}, nil
 	case "Body":
 		if r.Body == nil {
 			return &stream{}, nil

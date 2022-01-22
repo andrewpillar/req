@@ -71,6 +71,23 @@ type Value interface {
 	cmp(syntax.Op, Value) (Value, error)
 }
 
+type Iterable interface {
+	// Next returns the key and value for the value being iterated over. The
+	// error returned will be io.EOF when the end of the iterable has been
+	// reached.
+	Next() (Value, Value, error)
+}
+
+// ToIterable attempts to asset the given Value to an Iterable.
+func ToIterable(v Value) (Iterable, error) {
+	i, ok := v.(Iterable)
+
+	if !ok {
+		return nil, errors.New("type "+ v.valueType().String() + " is not an iterable")
+	}
+	return i, nil
+}
+
 // Index represents a Value that can be indexed, such as an Object or an Array.
 type Index interface {
 	// Has checks to see if the given Value exists in the underlying index.
@@ -78,10 +95,10 @@ type Index interface {
 
 	Get(Value) (Value, error)
 
-	Set(Value, Value) error
+	Set(bool, Value, Value) error
 }
 
-// ToIndex attemps to assert the given Value to an Index.
+// ToIndex attempts to assert the given Value to an Index.
 func ToIndex(v Value) (Index, error) {
 	i, ok := v.(Index)
 
