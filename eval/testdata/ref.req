@@ -6,4 +6,4 @@ Obj = (
 
 Resp = GET "__endpoint__" -> send;
 
-writeln _ "{$Array[0]} {$Array[4]} {$Obj["Key"]} {$Obj["foo"]} {$Resp.StatusCode}";
+writeln _ "$(Array[0]) $(Array[4]) $(Obj["Key"]) $(Obj["foo"]) $(Resp.StatusCode)";

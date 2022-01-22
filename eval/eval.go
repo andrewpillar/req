@@ -117,7 +117,7 @@ func (e *Evaluator) AddCmd(cmd *Command) {
 	e.cmds[cmd.Name] = cmd
 }
 
-// interpolate parses the given string for {$Ref}, {$Ref.Dot}, and {$Ref[Ind]}
+// interpolate parses the given string for $(Ref), $(Ref.Dot), and $(Ref[Ind])
 // expressions and interpolates any that are found using the given Context.
 func (e *Evaluator) interpolate(c *Context, litpos syntax.Pos, s string) (value.Value, error) {
 	var buf bytes.Buffer
@@ -156,19 +156,23 @@ func (e *Evaluator) interpolate(c *Context, litpos syntax.Pos, s string) (value.
 					i++
 					continue
 				}
+				continue
 			}
 		}
 
-		if r == '{' {
-			interpolate = true
-			pos.Col += i
-			continue
+		if r == '$' {
+			if i <= end && s[i] == '(' {
+				interpolate = true
+				pos.Col += i
+				i++ // skip ahead beyond the opening (
+				continue
+			}
 		}
 
-		if r == '}' {
+		if r == ')' && interpolate {
 			interpolate = false
 
-			n, err := syntax.ParseRef(string(expr))
+			n, err := syntax.ParseRef("$" + string(expr))
 
 			if err != nil {
 				return nil, Error{

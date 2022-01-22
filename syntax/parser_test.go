@@ -1153,7 +1153,7 @@ func Test_Parser(t *testing.T) {
 								Args: []Node{
 									&Lit{
 										Type:  StringLit,
-										Value: "{$Endpoint}/user",
+										Value: "$(Endpoint)/user",
 									},
 									&Object{
 										Pairs: []*KeyExpr{
@@ -1161,7 +1161,7 @@ func Test_Parser(t *testing.T) {
 												Key: &Name{Value: "Authorization"},
 												Value: &Lit{
 													Type:  StringLit,
-													Value: "Bearer {$Token}",
+													Value: "Bearer $(Token)",
 												},
 											},
 											{
@@ -1226,7 +1226,7 @@ func Test_Parser(t *testing.T) {
 								Args: []Node{
 									&Lit{
 										Type:  StringLit,
-										Value: `Hello {$User["login"]}`,
+										Value: `Hello $(User["login"])`,
 									},
 								},
 							},

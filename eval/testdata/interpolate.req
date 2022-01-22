@@ -2,12 +2,12 @@
 
 Resp = GET "__endpoint__" -> send;
 
-writeln _ "Status = {$Resp.Status}, Code = {$Resp.StatusCode}";
+writeln _ "Status = $(Resp.Status), Code = $(Resp.StatusCode)";
 
 Arr = [1, 2, 3];
 
-writeln _ "Arr[0] = {$Arr[0]}";
+writeln _ "Arr[0] = $(Arr[0])";
 
 Obj = (S: "string");
 
-writeln _ "Obj['S'] = {$Obj["S"]}";
+writeln _ "Obj['S'] = $(Obj["S"])";

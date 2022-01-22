@@ -5,11 +5,11 @@ Resp = GET "https://httpbin.org/json" -> send;
 Data = decode json $Resp.Body;
 
 for _, Slide = range $Data["slideshow"]["slides"] {
-	writeln _ "title = $Slide["title"], type = $Slide["type"]";
+	writeln _ "title = $(Slide["title"]), type = $(Slide["type"])";
 
 	if "items" in $Slide {
 		for _, Item = range $Slide["items"] {
-			writeln _ "\t{$Item}";
+			writeln _ "\t$(Item)";
 		}
 	}
 }

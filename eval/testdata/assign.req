@@ -10,21 +10,21 @@ Obj = (
 	Arr: [],
 );
 
-writeln _ "{$String} {$Int} {$Bool} {$Array} {$Obj}";
+writeln _ "$(String) $(Int) $(Bool) $(Array) $(Obj)";
 
 Array[0] = 0;
 Array[] = 5;
 
-writeln _ "{$Array}";
+writeln _ "$(Array)";
 
 Obj["Key"] = "string";
 
-writeln _ "{$Obj}";
+writeln _ "$(Obj)";
 
 Obj["Arr"][] = 1;
 
-writeln _ "{$Obj["Arr"][0]}";
+writeln _ "$(Obj["Arr"][0])";
 
 Obj["Arr"][0] = 2;
 
-writeln _ "{$Obj["Arr"][0]}";
+writeln _ "$(Obj["Arr"][0])";

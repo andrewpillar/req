@@ -11,8 +11,8 @@ if $Token == "" {
 	exit 1;
 }
 
-Resp = GET "{$Endpoint}/user" (
-	Authorization: "Bearer {$Token}",
+Resp = GET "$(Endpoint)/user" (
+	Authorization: "Bearer $(Token)",
 	Content-Type: "application/json; charset=utf-8",
 ) -> send;
 
@@ -20,7 +20,7 @@ match $Resp.StatusCode {
     200 -> {
 		User = decode json $Resp.Body;
 
-		print "Hello {$User["login"]}";
+		print "Hello $(User["login"])";
 	}
 	_   -> {
 		print $Resp.Body $Stderr;

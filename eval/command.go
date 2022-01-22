@@ -995,6 +995,7 @@ func decodeJson(cmd string, args []value.Value) (value.Value, error) {
 
 	switch v := arg0.(type) {
 	case value.String:
+		println(v.Value)
 		r = strings.NewReader(v.Value)
 	case value.Stream:
 		r = v

@@ -3,19 +3,19 @@
 Arr = [1, 2, 3, 4];
 
 for _, N = range $Arr {
-	writeln _ "N = {$N}";
+	writeln _ "N = $(N)";
 }
 
 for I, N = range $Arr {
-	writeln _ "I = {$I}, N = {$N}";
+	writeln _ "I = $(I), N = $(N)";
 }
 
 for I, S = range ["foo", "bar", "zap"] {
-	writeln _ "I = {$I}, S = {$S}";
+	writeln _ "I = $(I), S = $(S)";
 }
 
 Obj = (S: "string", A: [1, 2, 3, 4], I: 10);
 
 for K, V = range $Obj {
-	writeln _ "K = {$K}, V = {$V}";
+	writeln _ "K = $(K), V = $(V)";
 }

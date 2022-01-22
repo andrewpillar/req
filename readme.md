@@ -16,19 +16,19 @@ out to the GitHub API and displays the user making the call,
     }
 
     Headers = (
-        Authorization: "Bearer {$Token}",
+        Authorization: "Bearer $(Token)",
     );
 
-    Resp = GET "{$Endpoint}/user" $Headers -> send;
+    Resp = GET "$(Endpoint)/user" $Headers -> send;
 
     match $Resp.StatusCode {
         200 -> {
             User = decode json $Resp.Body;
 
-            writeln _ "Hello {$User["login"]}";
+            writeln _ "Hello $(User["login"])";
         }
         _   -> {
-            writeln $Stderr "Unexpected response:" $Resp.Status;
+            writeln $Stderr "Unexpected response: $(Resp.Status)";
             exit 1;
         }
     }

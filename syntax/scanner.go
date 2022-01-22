@@ -84,11 +84,18 @@ func (sc *scanner) string() {
 			sc.err("unexpected newline in string")
 			break
 		}
-		if r == '{' {
-			interpolate = true
+
+		if r == '$' {
+			if sc.get() == '(' {
+				interpolate = true
+			}
+			sc.unget()
 		}
-		if r == '}' {
-			interpolate = false
+
+		if r == ')' {
+			if interpolate {
+				interpolate = false
+			}
 		}
 		r = sc.get()
 	}

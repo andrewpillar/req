@@ -94,11 +94,10 @@ func Test_EvalErrors(t *testing.T) {
 		{`if "10" == 10 { }`, syntax.Pos{Line: 1, Col: 9}},
 		{`Arr = []; writeln _ $Arr[true];`, syntax.Pos{Line: 1, Col: 25}},
 		{`Arr = []; writeln _ $Arr["true"];`, syntax.Pos{Line: 1, Col: 25}},
-		{`Arr = []; writeln _ "{$Arr["true"]}";`, syntax.Pos{Line: 1, Col: 22}},
+		{`Arr = []; writeln _ "$(Arr["true"])";`, syntax.Pos{Line: 1, Col: 22}},
 		{`writeln _ $Undefined;`, syntax.Pos{Line: 1, Col: 12}},
-		{`writeln _ "Hello {$Undefined}";`, syntax.Pos{Line: 1, Col: 18}},
-		{`writeln _ "Hello {Undefined}";`, syntax.Pos{Line: 1, Col: 18}},
-		{`if true { S = "block"; } writeln _ "S = {$S}";`, syntax.Pos{Line: 1, Col: 41}},
+		{`writeln _ "Hello $(Undefined)";`, syntax.Pos{Line: 1, Col: 18}},
+		{`if true { S = "block"; } writeln _ "S = $(S)";`, syntax.Pos{Line: 1, Col: 41}},
 	}
 
 	for i, test := range tests {
