@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -19,13 +20,7 @@ import (
 	"github.com/andrewpillar/req/version"
 )
 
-func files() ([]string, error) {
-	dir, err := os.Getwd()
-
-	if err != nil {
-		return nil, err
-	}
-
+func files(dir string) ([]string, error) {
 	ents, err := os.ReadDir(dir)
 
 	if err != nil {
@@ -40,7 +35,7 @@ func files() ([]string, error) {
 		}
 
 		if fname := ent.Name(); strings.HasSuffix(fname, ".req") {
-			fnames = append(fnames, fname)
+			fnames = append(fnames, filepath.Join(dir, fname))
 		}
 	}
 
@@ -54,6 +49,8 @@ func repl(ctx context.Context, w io.Writer, r io.Reader) {
 	e := eval.New()
 
 	var c eval.Context
+
+	fmt.Println("req", version.Build)
 
 	for {
 		select {
@@ -109,14 +106,10 @@ func errh(errs chan error) func(syntax.Pos, string) {
 func main() {
 	argv0 := os.Args[0]
 
-	var (
-		showVersion bool
-		startRepl   bool
-	)
+	var showVersion bool
 
 	fs := flag.NewFlagSet(argv0, flag.ExitOnError)
 	fs.BoolVar(&showVersion, "version", false, "show version and exit")
-	fs.BoolVar(&startRepl, "repl", false, "enter the repl")
 	fs.Parse(os.Args[1:])
 
 	if showVersion {
@@ -124,7 +117,9 @@ func main() {
 		return
 	}
 
-	if startRepl {
+	args := fs.Args()
+
+	if len(args) == 0 {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -139,11 +134,28 @@ func main() {
 		return
 	}
 
-	fnames, err := files()
+	fnames := make([]string, 0, len(args))
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)
-		os.Exit(1)
+	for _, arg := range args {
+		info, err := os.Stat(arg)
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)
+			os.Exit(1)
+		}
+
+		if info.IsDir() {
+			paths, err := files(info.Name())
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)
+				os.Exit(1)
+			}
+
+			fnames = append(fnames, paths...)
+			continue
+		}
+		fnames = append(fnames, arg)
 	}
 
 	sems := make(chan struct{}, runtime.GOMAXPROCS(0)+10)
@@ -163,6 +175,7 @@ func main() {
 			nn, err := syntax.ParseFile(fname, errh(errs))
 
 			if err != nil {
+				errs <- err
 				return
 			}
 
