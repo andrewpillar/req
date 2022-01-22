@@ -520,10 +520,8 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 			switch v := arg2.(type) {
 			case value.String:
 				body = strings.NewReader(v.Sprint())
-			case value.File:
-				body = v.File
-			case *value.FormData:
-				body = v.Data
+			case value.Stream:
+				body = v
 			default:
 				return nil, &CommandError{
 					Cmd: cmd,
