@@ -522,6 +522,8 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 				body = strings.NewReader(v.Sprint())
 			case value.File:
 				body = v.File
+			case *value.FormData:
+				body = v.Data
 			default:
 				return nil, &CommandError{
 					Cmd: cmd,
