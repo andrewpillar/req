@@ -197,7 +197,7 @@ func (a *Array) cmp(op syntax.Op, b Value) (Value, error) {
 		}
 	}
 
-	other := b.(*Array)
+	other, _ := b.(*Array)
 
 	ans := false
 	invert := false

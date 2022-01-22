@@ -172,7 +172,7 @@ func (o *Object) cmp(op syntax.Op, b Value) (Value, error) {
 		}
 	}
 
-	other := b.(*Object)
+	other, _ := b.(*Object)
 
 	ans := false
 	invert := false
