@@ -90,7 +90,7 @@ func checkName(t *testing.T, expected, actual *Name) {
 
 func checkArray(t *testing.T, expected, actual *Array) {
 	if len(expected.Items) != len(actual.Items) {
-		t.Errorf("%s - unexpected Array length, expeced=%d, got=%d\n", actual.Pos(), len(expected.Items), len(actual.Items))
+		t.Errorf("%s - unexpected Array length, expected=%d, got=%d\n", actual.Pos(), len(expected.Items), len(actual.Items))
 		return
 	}
 
@@ -101,7 +101,7 @@ func checkArray(t *testing.T, expected, actual *Array) {
 
 func checkObject(t *testing.T, expected, actual *Object) {
 	if len(expected.Pairs) != len(actual.Pairs) {
-		t.Errorf("%s - unexpected Object.Pairs length, expeced=%d, got=%d\n", actual.Pos(), len(expected.Pairs), len(actual.Pairs))
+		t.Errorf("%s - unexpected Object.Pairs length, expected=%d, got=%d\n", actual.Pos(), len(expected.Pairs), len(actual.Pairs))
 		return
 	}
 

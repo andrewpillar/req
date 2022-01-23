@@ -1197,7 +1197,7 @@ func decodeUrl(cmd string, args []value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, &CommandError{
 			Cmd: cmd,
-			Err: errors.New("cannnot decode " + value.Type(arg0)),
+			Err: errors.New("cannot decode " + value.Type(arg0)),
 		}
 	}
 
