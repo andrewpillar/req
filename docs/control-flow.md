@@ -29,7 +29,7 @@ executed should the initial condition evaluate to `false`,
         # Do something else
     }
 
-`else` and `if ` can be combined for more explicit control flow,
+`else` and `if` can be combined for more explicit control flow,
 
     if $Resp.StatusCode >= 200 and $Resp.StatusCode < 300 {
         writeln _ "Everything is good";

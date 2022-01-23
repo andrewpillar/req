@@ -3,47 +3,74 @@
 Values are the builtin types of req. These can either be created via literals,
 or returned as a result of a [command](commands.md).
 
-* [Bool](#bool)
-* [String](#string)
-* [Number](#number)
-* [Array](#array)
-* [Object](#object)
-* [File](#file)
-* [FormData](#formdata)
-* [Request](#request)
-* [Response](#response)
-* [Stream](#stream)
-* [Zero](#zero)
+* [bool](#bool)
+* [string](#string)
+* [number](#number)
+* [array](#array)
+* [object](#object)
+* [file](#file)
+* [form-data](#form-data)
+* [request](#request)
+* [response](#response)
+* [stream](#stream)
+* [zero](#zero)
 
-## Bool
+## bool
 
 A bool represents either `true` or `false`.
 
-## String
+## string
 
-A string is a sequence of bytes wrapped between a pair of `"`. These support
-the escape sequences `\t`, `\r`, and `\n`. Strings also support interpolation
-via `$( )`,
+A string is a sequence of bytes. String literals are defined by wrapping the
+bytes between a pair of double quotes (`"`),
 
-    "Hello $(Name)"
-    "$(Obj["Key"])" # Double quotes do not need escaping during interpolation
+    "String"
 
-## Number
+these are immutable, in that, you cannot modify individual parts of a string,
+
+    S = "String";
+    S[2] = ""; # Not allowed
+
+Strings support the `\t`, `\r`, and `\n` escape sequences. Strings also support
+interpolation, whereby you can refer to previously defined variables within a
+string literal. This is achieved with a dollar (`$`) followed by a pair of
+parentheses, (`( )`),
+
+    Arr = [1, 2, 3, 4];
+    S = "Arr = $(Arr)"; # Arr = [1 2 3 4]
+
+when using interpolation to refer to a key in an object, you do not need to
+escape the double quotes within the parentheses,
+
+    Obj = (Key: "value");
+    S = "Object key = $(Obj["Key"])"; # Object key = value
+
+## number
 
 A number is a numeric value. This can either be an integer for a float. As of
 now req does not support working with negative numeric values, or any other
 numeric value that is not of base 10.
 
-## Array
+    10
+    10.25
+
+## array
 
 An array is a list of values. Arrays defined by the user can only contain one
 of the same type. The [zero](#zero) value is returned if out of bounds array
 access is made,
 
     Arr = [1, 2, 3, 4];
-    $Arr[5] # Does not error, results in zero value
+    Z = $Arr[5]; # Does not error, results in zero value
 
-## Object
+arrays are mutable, in that, you can modify the individual items in an array,
+as long as the new value is of the same type,
+
+    Arr = [1, 2, 3, 4];
+    Arr[0] = 0;
+    Arr[1] = "2"; # Not allowed
+
+## object
 
 An object is a list of key-value pairs, wrapped in a pair of `( )`. Keys defined
 in an object, are defined as identifiers,
@@ -57,57 +84,82 @@ returned.
 
     $Obj["Key"] # Does not error, results in zero value
 
-## File
+much like an array, individual items can be modified, as long as the new value
+is of the same type,
 
-A file represents a file that has been accessed via the [open](commands.md#open)
-command. A file can be read from and written to. A file can be used as a
-[Stream](#stream).
+    Obj = (Key: "value");
+    Obj["Key"] = "new value";
+    Obj["Key"] = 2; # Not allowed
+    Obj["Page"] = 2; # Allowed, creates a new key
 
-## FormData
+## file
 
-[Form data][0] represents the form data being sent as the body of an HTTP
-request. This is created via the [encode form-data](commands.md#encoding) command
-and would be typically used for doing file uploads. This has the following
-properties on it,
+A file represents an open file descriptior. The file value is returned from the
+[open](commands.md#open) command. A file can be read from and written to. A file
+can be used as a [Stream](#stream).
 
-* `Content-Type` - `string` - The `Content-Type` header for the form-data. This
-would be set in the header of a request being sent
+## form-data
 
-* `Data` - `Stream` - The file data of the form-data
+form-data represents the encoded data for a `multipart/form-data` of a form.
+This is created via the [encode form-data](commands.md#form-data) command and
+would typically be used for creating request bodies that would adhere to the
+[RFC 2388][RFC-2388] format when you want to submit `multipart/form-data` to an
+endpoint.
 
-## Request
+FormData is an entity with the following properties on it,
 
-Request represents an HTTP request being sent. This is created via one of the
-[request](commands.md#requests) commands. This has the following properties on
-it,
+* `Content-Type` - [string](#string)
+The `Content-Type` header for the encoded data. This would be set in the header
+of a request.
 
-* `Method` - `string` - The HTTP method of the request
+* `Data` - [stream](#stream)
+The raw bytes of encoded data. This would be used as the body of the request.
 
-* `URL` - `string` - The URL the request will be sent to
+## request
 
-* `Header` - `Object` - The headers set on the request
+Request represents an HTTP request. This is created via one of the
+[request](commands.md#request) commands.
 
-* `Body` - `Stream` - The body of the request
+Request is an entity with the following properties on it,
 
-## Response
+* `Method` - [string](#string)
+The HTTP method of the request.
 
-Response represents an HTTP respons that has been received. This is created via
-the [send](commands.md#send) command. This has the following properties on it,
+* `URL` - [string](#string)
+The URL the request will be sent to.
 
-* `Status` - `string` - The HTTP status of the response, such as `200 OK`
+* `Header` - [object](#object)
+The headers set on the request. This can only be set at time of request creation
+and not after.
 
-* `StatusCode` - `int` - The status code of the response
+* `Body` - [stream](#stream)
+The raw bytes of the request body.
 
-* `Header` - `Object` - The headers set on the response
+## response
 
-* `Body` - `Stream` - The body of the response
+Response represents an HTTP response that has been received. This is created
+via the [send](commands.md#send) command.
+
+Response is an entity with the following properties on it,
+
+* `Status` - [string](#string)
+The HTTP status of the response, such as `200 OK`.
+
+* `StatusCode` - [int](#number)
+The status code of the response.
+
+* `Header` - [object](#object)
+The headers set on the response.
+
+* `Body` - [stream](#stream)
+The raw bytes of the response body.
 
 ## Stream
 
 Stream represents a stream of read-only data. This will either be a buffer of
 data that exits in memory, or from another source such as an opened file.
 
-## Zero
+## zero
 
 Zero represents a zero value. A zero value is created when an invalid access
 to an array or object is made. A zero value will evaluate to `true` when
@@ -122,4 +174,4 @@ compared to another zero value of any type,
     $Zero == [] # true
     $Zero == () # true
 
-[0]: https://developer.mozilla.org/en-US/docs/Learn/Forms/Sending_and_retrieving_form_data
+[RFC-2388]: https://datatracker.ietf.org/doc/html/rfc2388 

@@ -26,10 +26,6 @@ then change into it and run the `make.sh` script,
 this will produce a `req` binary in the `bin` directory. Simply add this to your
 `PATH`.
 
->**Note:** One of the tests for testing the encoding of form-data may fail when
-you run `make.sh`. This is simply a flaky test that is currently being looked
-into.
-
 ## Running
 
 When not arguments are given to `req` then the REPL will be opened up. This can

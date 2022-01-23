@@ -1,8 +1,8 @@
 # Variables
 
 Variables in req are defined with an identifier on the left hand side, and a
-value on the right. This value can either be a literal, or an evaluated value
-from a [command](commands.md),
+value on the right. This [value](values.md) can either be a literal, or an
+evaluated value from a [command](commands.md),
 
     S = "string";
     I = 10;
