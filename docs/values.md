@@ -96,7 +96,7 @@ is of the same type,
 
 A file represents an open file descriptior. The file value is returned from the
 [open](commands.md#open) command. A file can be read from and written to. A file
-can be used as a [Stream](#stream).
+can be used as a [stream](#stream).
 
 ## form-data
 
