@@ -41,8 +41,9 @@ return values that can be assigned to variables,
 
     Enc = encode base64 "Hello world";
 
-commands can be chained together with arrow (`->`), this will take the result
-of one command and pass it as the first argument to the subsequent command,
+commands can be chained together with an arrow (`->`), this will take the
+result of one command and pass it as the first argument to the subsequent
+command,
 
     encode base64 "Hello world" -> decode base64;
 
