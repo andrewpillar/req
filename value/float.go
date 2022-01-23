@@ -24,7 +24,7 @@ func (f Float) Sprint() string {
 }
 
 func (f Float) valueType() valueType {
-	return intType
+	return floatType
 }
 
 func (f Float) cmp(op syntax.Op, b Value) (Value, error) {

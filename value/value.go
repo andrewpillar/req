@@ -15,6 +15,7 @@ type valueType uint
 const (
 	stringType   valueType = iota + 1 // string
 	intType                           // int
+	floatType                         // float
 	boolType                          // bool
 	arrayType                         // array
 	objectType                        // object

@@ -10,21 +10,22 @@ func _() {
 	var x [1]struct{}
 	_ = x[stringType-1]
 	_ = x[intType-2]
-	_ = x[boolType-3]
-	_ = x[arrayType-4]
-	_ = x[objectType-5]
-	_ = x[fileType-6]
-	_ = x[formDataType-7]
-	_ = x[requestType-8]
-	_ = x[responseType-9]
-	_ = x[streamType-10]
-	_ = x[nameType-11]
-	_ = x[zeroType-12]
+	_ = x[floatType-3]
+	_ = x[boolType-4]
+	_ = x[arrayType-5]
+	_ = x[objectType-6]
+	_ = x[fileType-7]
+	_ = x[formDataType-8]
+	_ = x[requestType-9]
+	_ = x[responseType-10]
+	_ = x[streamType-11]
+	_ = x[nameType-12]
+	_ = x[zeroType-13]
 }
 
-const _valueType_name = "stringintboolarrayobjectfileform-datarequestresponsestreamnamezero"
+const _valueType_name = "stringintfloatboolarrayobjectfileform-datarequestresponsestreamnamezero"
 
-var _valueType_index = [...]uint8{0, 6, 9, 13, 18, 24, 28, 37, 44, 52, 58, 62, 66}
+var _valueType_index = [...]uint8{0, 6, 9, 14, 18, 23, 29, 33, 42, 49, 57, 63, 67, 71}
 
 func (i valueType) String() string {
 	i -= 1
