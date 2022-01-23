@@ -71,7 +71,7 @@ func Parse(name string, r io.Reader, errh func(Pos, string)) ([]Node, error) {
 	return p.parse(false)
 }
 
-// ParseFile is a convenience function that parses the given file useing Parse.
+// ParseFile is a convenience function that parses the given file using Parse.
 func ParseFile(fname string, errh func(Pos, string)) ([]Node, error) {
 	f, err := os.Open(fname)
 
