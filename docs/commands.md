@@ -116,7 +116,7 @@ and returns the MIME type for that stream. If no MIME type can be detected then
 
     write <stream> [values...]
 
-The write commands writes the given [values](values.md) to the given output
+The write command writes the given [values](values.md) to the given output
 [stream](values.md#stream). If the given argument is an `_` identifier, then it
 will be written to standard output,
 
