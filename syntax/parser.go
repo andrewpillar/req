@@ -465,7 +465,7 @@ func (p *parser) ifstmt() *IfStmt {
 	}
 
 	if p.tok != _Lbrace {
-		p.errAt(n.Pos(), "missing condition in if statement")
+		p.expected(_Lbrace)
 		return n
 	}
 
