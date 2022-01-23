@@ -154,7 +154,7 @@ The headers set on the response.
 * `Body` - [stream](#stream)
 The raw bytes of the response body.
 
-## Stream
+## stream
 
 Stream represents a stream of read-only data. This will either be a buffer of
 data that exits in memory, or from another source such as an opened file.
