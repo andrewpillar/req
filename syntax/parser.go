@@ -459,6 +459,11 @@ func (p *parser) ifstmt() *IfStmt {
 		Cond: p.expr(),
 	}
 
+	if n.Cond == nil {
+		p.errAt(n.Pos(), "missing condition in if statement")
+		return n
+	}
+
 	if p.tok != _Lbrace {
 		p.errAt(n.Pos(), "missing condition in if statement")
 		return n
