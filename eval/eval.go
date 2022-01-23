@@ -661,22 +661,7 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 			}
 
 			if val != nil {
-				off := -1
-
-				for i, v := range args {
-					if _, err := value.ToName(v); err != nil {
-						off = i
-						break
-					}
-				}
-
-				// Sub-command with no arguments, so append to the end.
-				if off < 0 {
-					args = append(args, val)
-				} else {
-					newargs := append([]value.Value{val}, args[off:]...)
-					args = append(args[:off], newargs...)
-				}
+				args = append(args, val)
 			}
 
 			val, err = cmd.invoke(args)
