@@ -327,8 +327,8 @@ used the the paths to the certificate and key to use respectively.
     # and client.key files.
     GET "https://example.com" -> tls _ "client.crt" "client.key";
 
-    # Uses the contents of the /etc/ssl directory for the root CA, and the given
-    # client.crt and client.key files.
+    # Uses the contents of the /etc/ssl/certs directory for the root CA, and
+    # the given client.crt and client.key files.
     GET "https://example.com" -> tls "/etc/ssl/certs" "client.crt" "client.key";
 
     # Uses the contents of /etc/ssl/ca.crt for the root CA and the given
