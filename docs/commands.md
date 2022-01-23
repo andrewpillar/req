@@ -177,7 +177,8 @@ a [string](values.md#string) for the encoded results,
     encode form-data <object>
 
 The `encode form-data` command encodes the given value into a
-[form-data](values.md#form-data) value that can be sent as a request body,
+[form-data](values.md#form-data) value that can be sent as a
+[request](values.md#requet) body,
 
     F = open "avatar.jpg";
 
@@ -281,11 +282,11 @@ Requests are created by using one of the following commands,
     PATCH
     DELETE
 
-the first argument to the command must be the URL that the request is for. The
-second argument is an [object](values.md#object) detailing the headers for the
-[request](values.md#request), and the third is the request body. The final two
-arguments are optional. The methods, `HEAD`, `OPTIONS`, `GET`, and `DELETE`
-ignore the third argument,
+the first argument to the command must be the URL that the
+[request](values.md#request) is for. The second argument is an
+[object](values.md#object) detailing the headers for the request, and the third
+is the request body. The final two arguments are optional. The methods, `HEAD`,
+`OPTIONS`, `GET`, and `DELETE` ignore the third argument,
 
     GET "https://example.com" (Accept: "application/json");
 
