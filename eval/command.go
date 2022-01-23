@@ -734,7 +734,9 @@ func encodeFormData(boundary string) CommandFunc {
 			w.SetBoundary(boundary)
 		}
 
-		for k, v := range obj.Pairs {
+		for _, k := range obj.Order {
+			v := obj.Pairs[k]
+
 			switch v2 := v.(type) {
 			case value.String, value.Int, value.Bool:
 				w.WriteField(k, v.Sprint())
