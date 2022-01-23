@@ -108,11 +108,13 @@ endpoint.
 
 FormData is an entity with the following properties on it,
 
-* `Content-Type` - [string](#string)
+**`Content-Type`** - [string](#string)
+
 The `Content-Type` header for the encoded data. This would be set in the header
 of a request.
 
-* `Data` - [stream](#stream)
+**`Data`** - [stream](#stream)
+
 The raw bytes of encoded data. This would be used as the body of the request.
 
 ## request
