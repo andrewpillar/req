@@ -28,7 +28,7 @@ this will produce a `req` binary in the `bin` directory. Simply add this to your
 
 ## Running
 
-When not arguments are given to `req` then the REPL will be opened up. This can
+When no arguments are given to `req` then the REPL will be opened up. This can
 be used a playground during the writing of req scripts,
 
     $ req
