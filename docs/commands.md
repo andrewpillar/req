@@ -178,7 +178,7 @@ a [string](values.md#string) for the encoded results,
 
 The `encode form-data` command encodes the given value into a
 [form-data](values.md#form-data) value that can be sent as a
-[request](values.md#requet) body,
+[request](values.md#request) body,
 
     F = open "avatar.jpg";
 
