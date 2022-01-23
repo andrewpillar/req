@@ -2,18 +2,22 @@ package eval
 
 import (
 	"bytes"
+	"crypto/x509"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"mime"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/andrewpillar/req/value"
 	"github.com/andrewpillar/req/version"
@@ -555,9 +559,164 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 		req.Header.Set("User-Agent", "req/"+version.Build)
 	}
 
-	return value.Request{
-		Request: req,
+	return &value.Request{
+		Request:   req,
+		Transport: http.DefaultTransport,
 	}, nil
+}
+
+// TlsCmd implements the tls command for sending a request over TLS using the
+// given certificates.
+var TlsCmd = &Command{
+	Name: "tls",
+	Argc: -1,
+	Func: tlsfn,
+}
+
+func loadRootCAs(val value.Value) (*x509.CertPool, error) {
+	switch v := val.(type) {
+	case value.Name:
+		if v.Value != "_" {
+			return nil, errors.New("cannot use type " + value.Type(val) + " as string")
+		}
+
+		pool, err := x509.SystemCertPool()
+
+		if err != nil {
+			return nil, err
+		}
+		return pool, nil
+	case value.String:
+		info, err := os.Stat(v.Value)
+
+		if err != nil {
+			return nil, err
+		}
+
+		pool := x509.NewCertPool()
+
+		if !info.IsDir() {
+			b, err := os.ReadFile(v.Value)
+
+			if err != nil {
+				return nil, err
+			}
+
+			pool.AppendCertsFromPEM(b)
+			return pool, nil
+		}
+
+		ents, err := os.ReadDir(v.Value)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, ent := range ents {
+			if ent.IsDir() {
+				continue
+			}
+
+			b, err := os.ReadFile(filepath.Join(v.Value, ent.Name()))
+
+			if err != nil {
+				return nil, err
+			}
+			pool.AppendCertsFromPEM(b)
+		}
+		return pool, nil
+	default:
+		return nil, errors.New("cannot use type " + value.Type(val) + " as string")
+	}
+}
+
+func tlsfn(cmd string, args []value.Value) (value.Value, error) {
+	if len(args) < 1 {
+		return nil, &CommandError{
+			Op:  "call",
+			Cmd: cmd,
+			Err: errNotEnoughArgs,
+		}
+	}
+
+	last := args[len(args)-1]
+
+	req, err := value.ToRequest(last)
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	args = args[:len(args)-1]
+
+	var rootCAs *x509.CertPool
+
+	certs := make([]tls.Certificate, 0)
+
+	if len(args) >= 1 {
+		arg0 := args[0]
+
+		rootCAs, err = loadRootCAs(arg0)
+
+		if err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+
+		if len(args) >= 3 {
+			certfile, err := value.ToString(args[1])
+
+			if err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
+
+			keyfile, err := value.ToString(args[2])
+
+			if err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
+
+			cert, err := tls.LoadX509KeyPair(certfile.Value, keyfile.Value)
+
+			if err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
+			certs = append(certs, cert)
+		}
+	}
+
+	tlscfg := &tls.Config{
+		RootCAs:      rootCAs,
+		Certificates: certs,
+	}
+
+	req.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialTLS: func(network, addr string) (net.Conn, error) {
+			return tls.Dial(network, addr, tlscfg)
+		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
+	return req, nil
 }
 
 // SendCmd implements the send command for sending a request.
@@ -577,7 +736,9 @@ func send(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
-	var cli http.Client
+	cli := http.Client{
+		Transport: req.Transport,
+	}
 
 	resp, err := cli.Do(req.Request)
 
@@ -593,7 +754,7 @@ func send(cmd string, args []value.Value) (value.Value, error) {
 	}, nil
 }
 
-// SnifCmd implements the sniff command for inspecting the content type of a
+// SniffCmd implements the sniff command for inspecting the content type of a
 // stream.
 var SniffCmd = &Command{
 	Name: "sniff",

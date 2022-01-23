@@ -14,20 +14,22 @@ import (
 // to the request.
 type Request struct {
 	*http.Request
+
+	Transport http.RoundTripper
 }
 
 // ToRequest attempts to type assert the given value to a request.
-func ToRequest(v Value) (Request, error) {
-	r, ok := v.(Request)
+func ToRequest(v Value) (*Request, error) {
+	r, ok := v.(*Request)
 
 	if !ok {
-		return Request{}, typeError(v.valueType(), requestType)
+		return nil, typeError(v.valueType(), requestType)
 	}
 	return r, nil
 }
 
 // Select will return the value of the field with the given name.
-func (r Request) Select(val Value) (Value, error) {
+func (r *Request) Select(val Value) (Value, error) {
 	name, err := ToName(val)
 
 	if err != nil {
@@ -69,7 +71,7 @@ func (r Request) Select(val Value) (Value, error) {
 
 // String formats the request to a string. The formatted string will detail the
 // pointer at which the underlying request handle exists.
-func (r Request) String() string {
+func (r *Request) String() string {
 	return fmt.Sprintf("Request<addr=%p>", r.Request)
 }
 
@@ -82,7 +84,7 @@ func copyrc(rc io.ReadCloser) (io.ReadCloser, io.ReadCloser) {
 
 // Sprint formats the request into a string. This makes a copy of the request
 // body so as to not deplete the original.
-func (r Request) Sprint() string {
+func (r *Request) Sprint() string {
 	if r.Request == nil {
 		return ""
 	}
@@ -102,10 +104,10 @@ func (r Request) Sprint() string {
 	return buf.String()
 }
 
-func (r Request) valueType() valueType {
+func (r *Request) valueType() valueType {
 	return requestType
 }
 
-func (r Request) cmp(op syntax.Op, _ Value) (Value, error) {
+func (r *Request) cmp(op syntax.Op, _ Value) (Value, error) {
 	return nil, opError(op, requestType)
 }

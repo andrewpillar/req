@@ -23,6 +23,7 @@
   * [url](#url-1)
 * [Requests](#requests)
   * [send](#send)
+  * [tls](#tls)
 
 
 ## Overview
@@ -305,3 +306,34 @@ The `send` command sends the given [request](values.md#request). This returns a
     Resp = send $Req;
 
     Resp = GET "https://example.com" -> send;
+
+### tls
+
+    tls [string] [string] [string] <request>
+
+The `tls` command configures the given [request](values.md#request) for
+transport via TLS. If the only argument given to this command is the request
+itself, then only the system certificate pool is used as the root CA. If the
+first argument is given and is an `_` identifier, then the system certificate
+pool is used as the root CA, otherwise a [string](values.md#string) is expected.
+This string can either be a path to a file, or a directory containing multiple
+certificates. If the second and third arguments are both given then these are
+used the the paths to the certificate and key to use respectively.
+
+    # Uses system certificate pool for root CA.
+    GET "https://example.com" -> tls;
+
+    # Uses the system certificate pool for root CA, and the given client.crt
+    # and client.key files.
+    GET "https://example.com" -> tls _ "client.crt" "client.key";
+
+    # Uses the contents of the /etc/ssl directory for the root CA, and the given
+    # client.crt and client.key files.
+    GET "https://example.com" -> tls "/etc/ssl/certs" "client.crt" "client.key";
+
+    # Uses the contents of /etc/ssl/ca.crt for the root CA and the given
+    #client.crt and client.key files.
+    GET "https://example.com" -> tls "/etc/ssl/ca.crt" "client.crt" "client.key";
+
+    # This can be chained with the send command like so for TLS transport.
+    GET "https://example.com" -> tls -> send;

@@ -94,6 +94,7 @@ var builtinCmds = []*Command{
 	PostCmd,
 	PatchCmd,
 	DeleteCmd,
+	TlsCmd,
 	SendCmd,
 	SniffCmd,
 }
