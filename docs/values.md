@@ -108,14 +108,11 @@ endpoint.
 
 FormData is an entity with the following properties on it,
 
-**`Content-Type`** - [string](#string)
+**`Content-Type`** - [string](#string) - The `Content-Type` header for the
+encoded data. This would be set in the header of a request.
 
-The `Content-Type` header for the encoded data. This would be set in the header
-of a request.
-
-**`Data`** - [stream](#stream)
-
-The raw bytes of encoded data. This would be used as the body of the request.
+**`Data`** - [stream](#stream) - The raw bytes of encoded data. This would be
+used as the body of the request.
 
 ## request
 
@@ -124,18 +121,14 @@ Request represents an HTTP request. This is created via one of the
 
 Request is an entity with the following properties on it,
 
-* `Method` - [string](#string)
-The HTTP method of the request.
+**`Method`** - [string](#string) - The HTTP method of the request.
 
-* `URL` - [string](#string)
-The URL the request will be sent to.
+**`URL`** - [string](#string) - The URL the request will be sent to.
 
-* `Header` - [object](#object)
-The headers set on the request. This can only be set at time of request creation
-and not after.
+**`Header`** - [object](#object) - The headers set on the request. This can
+only be set at time of request creation and not after.
 
-* `Body` - [stream](#stream)
-The raw bytes of the request body.
+**`Body`** - [stream](#stream) - The raw bytes of the request body.
 
 ## response
 
@@ -144,17 +137,14 @@ via the [send](commands.md#send) command.
 
 Response is an entity with the following properties on it,
 
-* `Status` - [string](#string)
-The HTTP status of the response, such as `200 OK`.
+**`Status`** - [string](#string) - The HTTP status of the response, such as
+`200 OK`.
 
-* `StatusCode` - [int](#number)
-The status code of the response.
+**`StatusCode`** - [int](#number) - The status code of the response.
 
-* `Header` - [object](#object)
-The headers set on the response.
+**`Header`** - [object](#object) - The headers set on the response.
 
-* `Body` - [stream](#stream)
-The raw bytes of the response body.
+**`Body`** - [stream](#stream) - The raw bytes of the response body.
 
 ## stream
 
