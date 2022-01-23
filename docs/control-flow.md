@@ -175,11 +175,11 @@ an operator to determine their equality. In req, these are,
 only expressions of the same type can be compared in this way. The following
 values cannot be compared,
 
-* [File](values.md#file)
-* [FormData](values.md#formdata)
-* [Request](values.md#request)
-* [Response](values.md#response)
-* [Stream](values.md#stream)
+* [file](values.md#file)
+* [form-data](values.md#form-data)
+* [request](values.md#request)
+* [response](values.md#response)
+* [stream](values.md#stream)
 
 bools, objects, and arrays can only have the equals and not equals operators
 used for comparison.
