@@ -170,7 +170,7 @@ identifier which is the sub-command to invoke.
 The `encode base64` command encodes the given value into base64. This returns
 a [string](values.md#string) for the encoded results,
 
-    Basic = encode base64 "admin:{$Password}";
+    Basic = encode base64 "admin:$(Password)";
     Enc = open "image.jpg" -> encode base64;
 
 ### form-data
