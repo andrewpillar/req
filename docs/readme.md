@@ -28,25 +28,18 @@ this will produce a `req` binary in the `bin` directory. Simply add this to your
 
 ## Running
 
-When no arguments are given to `req` then the REPL will be opened up. This can
-be used a playground during the writing of req scripts,
+A single req script can be executed by passing it to the `req` binary,
+
+    $ req script.req
+
+if no arguments are given to `req`, then the REPL will be opened up. This can
+be used as a playground during the writing of req scripts,
 
     $ req
     > S = "string"
     > $S
     "string"
     >
-
-each argument given to req will be the path to a script or scripts to be
-executed. If the path is a directory then all of the req scripts in the top
-level of that directory are executed,
-
-    # Execute all scripts in the current directory
-    $ req .
-
-    $ req 0.req 1.req 2.req
-
-each script executed is executed concurrently.
 
 * [Syntax](syntax.md)
 * [Values](values.md)
