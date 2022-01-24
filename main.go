@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -14,32 +13,42 @@ import (
 	"github.com/andrewpillar/req/version"
 )
 
-func repl(ctx context.Context, w io.Writer, r io.Reader) {
+func repl(ch chan os.Signal, w io.Writer, r io.Reader) {
 	sc := bufio.NewScanner(r)
 
 	e := eval.New()
 
 	var c eval.Context
 
-	fmt.Println("req", version.Build)
+	fmt.Fprintln(w, "req", version.Build)
+
+	in := make(chan string)
+
+	go func() {
+		for {
+			if !sc.Scan() {
+				close(in)
+				return
+			}
+			in <- sc.Text()
+		}
+	}()
+
+	fmt.Fprint(w, "> ")
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-ch:
+			close(in)
+			fmt.Fprintln(w)
 			return
-		default:
-			fmt.Print("> ")
-
-			if !sc.Scan() {
+		case line, ok := <-in:
+			if !ok {
+				if err := sc.Err(); err != nil {
+					fmt.Fprintln(w, "ERR", err)
+				}
 				return
 			}
-
-			if err := sc.Err(); err != nil {
-				fmt.Fprintln(w, "ERR", err)
-				continue
-			}
-
-			line := sc.Text()
 
 			if line == "" {
 				continue
@@ -68,6 +77,7 @@ func repl(ctx context.Context, w io.Writer, r io.Reader) {
 					fmt.Fprintln(w, val.String())
 				}
 			}
+			fmt.Fprint(w, "> ")
 		}
 	}
 }
@@ -89,17 +99,11 @@ func main() {
 	args := fs.Args()
 
 	if len(args) == 0 {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
 		ch := make(chan os.Signal, 1)
 
 		signal.Notify(ch, os.Interrupt)
 
-		go repl(ctx, os.Stdout, os.Stdin)
-
-		<-ch
-		cancel()
+		repl(ch, os.Stdout, os.Stdin)
 		return
 	}
 
