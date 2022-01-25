@@ -132,7 +132,7 @@ will be written to standard output,
 
 ### writeln
 
-    writeln <Stream> [Values...]
+    writeln <stream> [values...]
 
 The writeln command is similar to the write command in how it functions. Only
 it terminates everything written with a `\n` character.
@@ -240,7 +240,7 @@ representation. This returns a [stream](values.md#stream) of the decoded value,
     decode form-data <form-data>
 
 The `decode form-data` command decodes the given value from the
-[form-data](values.md#form-data) representation. This return an Object of the
+[form-data](values.md#form-data) representation. This return an object of the
 decoded value,
 
     Obj = encode form-data (
@@ -272,7 +272,7 @@ values,
 
 ## Requests
 
-    METHOD <string> [Object] [Stream|string]
+    METHOD <string> [object] [stream|string]
 
 Requests are created by using one of the following commands,
 
@@ -293,7 +293,7 @@ is the request body. The final two arguments are optional. The methods, `HEAD`,
     GET "https://example.com" (Accept: "application/json");
 
     Payload = open "payload.json";
-    POST "https://example.com" (Content-Type: application/json") $Payload;
+    POST "https://example.com" (Content-Type: "application/json") $Payload;
 
 ### send
 
@@ -332,7 +332,7 @@ used the the paths to the certificate and key to use respectively.
     GET "https://example.com" -> tls "/etc/ssl/certs" "client.crt" "client.key";
 
     # Uses the contents of /etc/ssl/ca.crt for the root CA and the given
-    #client.crt and client.key files.
+    # client.crt and client.key files.
     GET "https://example.com" -> tls "/etc/ssl/ca.crt" "client.crt" "client.key";
 
     # This can be chained with the send command like so for TLS transport.
