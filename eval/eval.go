@@ -9,7 +9,6 @@ import (
 	"io"
 	"strconv"
 	"unicode/utf8"
-
 	"github.com/andrewpillar/req/syntax"
 	"github.com/andrewpillar/req/value"
 )
@@ -99,10 +98,15 @@ var builtinCmds = []*Command{
 	SniffCmd,
 }
 
-func New() *Evaluator {
+// New returns a new evaluator for evaluating req scripts. The given writer is
+// used as the standard output for the write and writeln commands.
+func New(out io.Writer) *Evaluator {
 	e := &Evaluator{
 		cmds: make(map[string]*Command),
 	}
+
+	WriteCmd.Func = write(out)
+	WritelnCmd.Func = writeln(out)
 
 	for _, cmd := range builtinCmds {
 		e.AddCmd(cmd)

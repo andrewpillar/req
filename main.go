@@ -1,83 +1,65 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"os/signal"
 
 	"github.com/andrewpillar/req/eval"
 	"github.com/andrewpillar/req/syntax"
 	"github.com/andrewpillar/req/version"
+
+	"golang.org/x/term"
 )
 
-func repl(ch chan os.Signal, w io.Writer, r io.Reader) {
-	sc := bufio.NewScanner(r)
-
-	e := eval.New()
-
-	var c eval.Context
-
-	fmt.Fprintln(w, "req", version.Build)
+func repl(term *term.Terminal) {
+	fmt.Fprintln(term, "req", version.Build)
 
 	in := make(chan string)
 
 	go func() {
 		for {
-			if !sc.Scan() {
+			line, err := term.ReadLine()
+
+			if err != nil {
 				close(in)
 				return
 			}
-			in <- sc.Text()
+			in <- line
 		}
 	}()
 
-	fmt.Fprint(w, "> ")
+	e := eval.New(term)
 
-	for {
-		select {
-		case <-ch:
-			close(in)
-			fmt.Fprintln(w)
-			return
-		case line, ok := <-in:
-			if !ok {
-				if err := sc.Err(); err != nil {
-					fmt.Fprintln(w, "ERR", err)
-				}
-				return
-			}
+	var c eval.Context
 
-			if line == "" {
-				continue
-			}
+	for line := range in {
+		if line == "" {
+			continue
+		}
 
-			nn, err := syntax.ParseExpr(line)
+		nn, err := syntax.ParseExpr(line)
+
+		if err != nil {
+			fmt.Fprintln(term, err)
+			continue
+		}
+
+		for _, n := range nn {
+			val, err := e.Eval(&c, n)
 
 			if err != nil {
-				fmt.Fprintln(w, err)
+				if evalerr, ok := err.(eval.Error); ok {
+					fmt.Fprintln(term, evalerr.Err)
+					continue
+				}
+				fmt.Fprintln(term, err)
 				continue
 			}
 
-			for _, n := range nn {
-				val, err := e.Eval(&c, n)
-
-				if err != nil {
-					if evalerr, ok := err.(eval.Error); ok {
-						fmt.Fprintln(w, evalerr.Err)
-						continue
-					}
-					fmt.Fprintln(w, err)
-					continue
-				}
-
-				if val != nil {
-					fmt.Fprintln(w, val.String())
-				}
+			if val != nil {
+				fmt.Fprintln(term, val)
 			}
-			fmt.Fprint(w, "> ")
 		}
 	}
 }
@@ -99,11 +81,20 @@ func main() {
 	args := fs.Args()
 
 	if len(args) == 0 {
-		ch := make(chan os.Signal, 1)
+		fd := int(os.Stdin.Fd())
 
-		signal.Notify(ch, os.Interrupt)
+		state, err := term.MakeRaw(fd)
 
-		repl(ch, os.Stdout, os.Stdin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)
+			os.Exit(1)
+		}
+
+		t := term.NewTerminal(os.Stdout, "> ")
+
+		repl(t)
+		term.Restore(fd, state)
+		fmt.Println()
 		return
 	}
 
@@ -116,7 +107,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	e := eval.New()
+	e := eval.New(os.Stdout)
 
 	if err := e.Run(nn); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)

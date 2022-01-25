@@ -323,21 +323,12 @@ func doWrite(out io.Writer, cmd string, args []value.Value) (value.Value, error)
 		}
 	}
 
-	var buf bytes.Buffer
-
 	for _, arg := range args[1:] {
-		if _, err := io.WriteString(&buf, arg.Sprint()); err != nil {
+		if _, err := io.WriteString(out, arg.Sprint()); err != nil {
 			return nil, &CommandError{
 				Cmd: cmd,
 				Err: err,
 			}
-		}
-	}
-
-	if _, err := io.Copy(out, &buf); err != nil {
-		return nil, &CommandError{
-			Cmd: cmd,
-			Err: err,
 		}
 	}
 	return nil, nil

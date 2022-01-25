@@ -57,16 +57,13 @@ func Test_Eval(t *testing.T) {
 		fname := filepath.Join("testdata", ent.Name())
 		out := fname[:len(fname)-3] + "out"
 
-		WriteCmd.Func = write(&buf)
-		WritelnCmd.Func = writeln(&buf)
-
 		nn, err := syntax.Parse(fname, readfile(t, fname), errh(t))
 
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		e := New()
+		e := New(&buf)
 
 		if err := e.Run(nn); err != nil {
 			t.Fatal(err)
@@ -107,7 +104,7 @@ func Test_EvalErrors(t *testing.T) {
 			t.Fatalf("tests[%d] - %s\n", i, err)
 		}
 
-		e := New()
+		e := New(os.Stdout)
 
 		err = e.Run(nn)
 
