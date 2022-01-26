@@ -64,11 +64,10 @@ reading from streams and files, as well as writing to files.
 
 The open command takes a single argument that is the path to the file to open.
 If the file fails to open then the script is terminated. If the given file does
-not exist, then it is created. If the parent directories of the file do not
-exist, then these are created. The returned [file](values.md#file) will be
+not exist, then it is created. The returned [file](values.md#file) will be
 opened for reading, writing, and appending.
 
-    F = open "log/request.log";
+    F = open "request.log";
 
 ### read
 

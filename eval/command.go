@@ -145,13 +145,6 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(str.Value), os.FileMode(0755)); err != nil {
-		return nil, &CommandError{
-			Cmd: cmd,
-			Err: err,
-		}
-	}
-
 	f, err := os.OpenFile(str.Value, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0644))
 
 	if err != nil {
