@@ -1,0 +1,9 @@
+
+
+世界 = "world";
+
+Obj = (
+	Key: $世界,
+);
+
+writeln _ $Obj["Key"];

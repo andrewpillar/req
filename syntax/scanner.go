@@ -1,6 +1,9 @@
 package syntax
 
-import "fmt"
+import (
+	"fmt"
+	"unicode"
+)
 
 type scanner struct {
 	*source
@@ -22,7 +25,7 @@ func newScanner(src *source) *scanner {
 }
 
 func isLetter(r rune) bool {
-	return 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || r == '_'
+	return 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || r == '_' || unicode.IsLetter(r)
 }
 
 func isDigit(r rune) bool {
