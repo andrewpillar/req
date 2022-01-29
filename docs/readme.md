@@ -7,6 +7,11 @@ its capabilities however.
 
 * [Installation](#installation)
 * [Running](#running)
+* [Conventions](#conventions)
+  * [Formatting](#formatting)
+  * [Comments](#comments)
+  * [Names](#names)
+* [Guide](#guide)
 
 ## Installation
 
@@ -40,6 +45,81 @@ be used as a playground during the writing of req scripts,
     > $S
     "string"
     >
+
+## Conventions
+
+The following conventions should be followed when writing a req script. These
+are meant to aid in the readability and consistency of the scripts that are
+written.
+
+### Formatting
+
+Each req script should start with two blank lines at the top. This is not needed
+however, if you intend on having an opening comment, in which case this goes
+starts from the first line. If using a shebang, then the following two lines
+should be blank,
+
+    #!/usr/bin/env req
+    
+    
+    # Beginning of script...
+
+Use tabs for indentation, and spaces for alignment, for example,
+
+    Headers = (
+        Accept:        "application/json",
+        Authorization: "Bearer $(Token)",
+    );
+
+When defining an object use trailing commas. When defining an array only use
+trailing commas if the items are on a newline, for example,
+
+    Arr = [1, 2, 3, 4]; # No trailing comma, all items on same line
+
+    Arr = [
+        1, 2, 3, 4, # Trailing comma, items start on a newline
+    ];
+
+    # Trailing comma, items each start on a newline
+    Arr = [
+        1,
+        2,
+        3,
+        4,
+    ];
+
+There is no limit placed on the length of a line in a req script, though it is
+suggested to aim to keep them between 80 - 100 characters in length. Exceeding
+this length is fine when the circumstance necessitates it, this is something
+that would only be known when it happens.
+
+### Comments
+
+Comments in req a prefixed with a `#`. It is typically preferred to have
+comments on individual lines. Having a comment on the same line as an
+expression is fine only if the length of the line can afford it.
+
+### Names
+
+Names in req should follow PascalCase. This is not mandated by the parsing of
+a req script, but is suggested so at a glance you can delineate between a name
+and a command,
+
+    Obj = (
+        Key: "value", # Use PascalCase for object keys.
+    );
+
+When defining an object that will be used as request headers, ensure the keys
+are capitalized where necessary, and `-` separated where necessary. Even though
+HTTP headers are case insensitive, it is recommended you adhere to the following
+format for consistency across the rest of a script,
+
+    Headers = (
+        Content-Type: "application/json",
+        User-Agent:   "my req script",
+    );
+
+## Guide
 
 * [Syntax](syntax.md)
 * [Values](values.md)
