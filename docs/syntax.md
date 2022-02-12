@@ -1,6 +1,6 @@
 # Syntax
 
-A req script is a plain text file with `.req` suffixed to the name, Each script
+A req script is a plain text file with `.req` suffixed to the name. Each script
 file is a list of statements, ending with a semicolon (`;`).
 
 * [Comments](#comments)

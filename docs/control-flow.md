@@ -162,7 +162,7 @@ will evaluated to `true` if the key exists in the object,
 
 ## Equality operators
 
-Equelity operators in req are used to evaluate two expressions on either side of
+Equality operators in req are used to evaluate two expressions on either side of
 an operator to determine their equality. In req, these are,
 
     ==    equals
