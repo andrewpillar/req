@@ -42,7 +42,7 @@ that may come with it.
 The cURL approach can work, for simple one off requests, but when you want to
 do something more with the response you're left with having to munge that data
 with jq, grep, sed, or awk (or all of the above). Using a programming language
-gives you more control, but can me more cumbersome as you have far many more
+gives you more control, but can be more cumbersome as you have far many more
 knobs to turn.
 
 req provides a middleground between the two. A limited syntax, with builtin
