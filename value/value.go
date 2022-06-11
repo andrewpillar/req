@@ -17,6 +17,8 @@ const (
 	intType                           // int
 	floatType                         // float
 	boolType                          // bool
+	timeType                          // time
+	durationType                      // duration
 	arrayType                         // array
 	objectType                        // object
 	fileType                          // file

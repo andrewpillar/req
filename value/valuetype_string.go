@@ -12,21 +12,23 @@ func _() {
 	_ = x[intType-2]
 	_ = x[floatType-3]
 	_ = x[boolType-4]
-	_ = x[arrayType-5]
-	_ = x[objectType-6]
-	_ = x[fileType-7]
-	_ = x[formDataType-8]
-	_ = x[requestType-9]
-	_ = x[responseType-10]
-	_ = x[cookieType-11]
-	_ = x[streamType-12]
-	_ = x[nameType-13]
-	_ = x[zeroType-14]
+	_ = x[timeType-5]
+	_ = x[durationType-6]
+	_ = x[arrayType-7]
+	_ = x[objectType-8]
+	_ = x[fileType-9]
+	_ = x[formDataType-10]
+	_ = x[requestType-11]
+	_ = x[responseType-12]
+	_ = x[cookieType-13]
+	_ = x[streamType-14]
+	_ = x[nameType-15]
+	_ = x[zeroType-16]
 }
 
-const _valueType_name = "stringintfloatboolarrayobjectfileform-datarequestresponsecookiestreamnamezero"
+const _valueType_name = "stringintfloatbooltimedurationarrayobjectfileform-datarequestresponsecookiestreamnamezero"
 
-var _valueType_index = [...]uint8{0, 6, 9, 14, 18, 23, 29, 33, 42, 49, 57, 63, 69, 73, 77}
+var _valueType_index = [...]uint8{0, 6, 9, 14, 18, 22, 30, 35, 41, 45, 54, 61, 69, 75, 81, 85, 89}
 
 func (i valueType) String() string {
 	i -= 1

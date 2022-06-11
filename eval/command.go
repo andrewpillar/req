@@ -81,6 +81,37 @@ func (c Command) invoke(args []value.Value) (value.Value, error) {
 	return c.Func(c.Name, args)
 }
 
+var CookieCmd = &Command{
+	Name: "cookie",
+	Argc: 1,
+	Func: cookie,
+}
+
+func cookie(cmd string, args []value.Value) (value.Value, error) {
+	obj, err := value.ToObject(args[0])
+
+	if err != nil {
+		return nil, &CommandError{
+			Cmd: cmd,
+			Err: err,
+		}
+	}
+
+	cookie := value.Cookie{
+		Cookie: &http.Cookie{},
+	}
+
+	for key, val := range obj.Pairs {
+		if err := cookie.Set(key, val); err != nil {
+			return nil, &CommandError{
+				Cmd: cmd,
+				Err: err,
+			}
+		}
+	}
+	return cookie, nil
+}
+
 // EnvCommand implements the env command for retrieving environment variables.
 var EnvCmd = &Command{
 	Name: "env",
@@ -527,6 +558,31 @@ func request(cmd string, args []value.Value) (value.Value, error) {
 
 	if obj != nil {
 		for key, val := range obj.Pairs {
+			if key == "Cookie" {
+				switch v := val.(type) {
+				case value.Cookie:
+					req.AddCookie(v.Cookie)
+				case *value.Array:
+					for _, it := range v.Items {
+						c, err := value.ToCookie(it)
+
+						if err != nil {
+							return nil, &CommandError{
+								Cmd: cmd,
+								Err: err,
+							}
+						}
+						req.AddCookie(c.Cookie)
+					}
+				default:
+					return nil, &CommandError{
+						Cmd: cmd,
+						Err: errors.New("cannot use type " + value.Type(v) + " as request cookie"),
+					}
+				}
+				continue
+			}
+
 			str, err := value.ToString(val)
 
 			if err != nil {

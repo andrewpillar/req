@@ -77,6 +77,7 @@ type Evaluator struct {
 }
 
 var builtinCmds = []*Command{
+	CookieCmd,
 	DecodeCmd,
 	EncodeCmd,
 	EnvCmd,
@@ -244,16 +245,14 @@ func (e *Evaluator) resolveDot(c *Context, n *syntax.DotExpr) (value.Value, erro
 		return nil, err
 	}
 
-	name, err := value.ToName(left)
+	val := left
 
-	if err != nil {
-		return nil, err
-	}
+	if name, err := value.ToName(left); err == nil {
+		val, err = c.Get(name.Value)
 
-	val, err := c.Get(name.Value)
-
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sel, err := value.ToSelector(val)

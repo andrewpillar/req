@@ -478,6 +478,33 @@ func Test_ParseRef(t *testing.T) {
 				},
 			},
 		},
+		{
+			`$Resp.Cookie["cookie-name"].Value`,
+			&Ref{
+				Left: &DotExpr{
+					Left: &IndExpr{
+						Left: &DotExpr{
+							Left:  &Name{Value: "Resp"},
+							Right: &Name{Value: "Cookie"},
+						},
+						Right: &Lit{Type: StringLit, Value: "cookie-name"},
+					},
+					Right: &Name{Value: "Value"},
+				},
+			},
+		},
+		{
+			`$Obj["Resp"].Status`,
+			&Ref{
+				Left: &DotExpr{
+					Left: &IndExpr{
+						Left:  &Name{Value: "Obj"},
+						Right: &Lit{Type: StringLit, Value: "Resp"},
+					},
+					Right: &Name{Value: "Status"},
+				},
+			},
+		},
 	}
 
 	for i, test := range tests {
