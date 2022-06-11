@@ -112,7 +112,7 @@ func ToIndex(v Value) (Index, error) {
 	return i, nil
 }
 
-// Selector represents a Value that has fields that can be access via a dot.
+// Selector represents a Value that has fields that can be accessed via a dot.
 type Selector interface {
 	Select(Value) (Value, error)
 }
@@ -122,7 +122,7 @@ func ToSelector(v Value) (Selector, error) {
 	s, ok := v.(Selector)
 
 	if !ok {
-		return nil, typeError(v.valueType(), streamType)
+		return nil, errors.New("type " + v.valueType().String() + " has no fields")
 	}
 	return s, nil
 }
