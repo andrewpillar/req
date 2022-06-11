@@ -94,7 +94,7 @@ func (a *Array) Get(v Value) (Value, error) {
 }
 
 // Set sets the value at the given key with the given value.
-func (a *Array) Set(strict bool, key, val Value) error {
+func (a *Array) Set(_ bool, key, val Value) error {
 	if _, ok := key.(*Array); ok {
 		if len(a.Items) > 0 {
 			if err := CompareType(val, a.Items[0]); err != nil {

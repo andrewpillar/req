@@ -29,13 +29,42 @@ func (r Response) Select(val Value) (Value, error) {
 		return String{Value: r.Status}, nil
 	case "StatusCode":
 		return Int{Value: int64(r.StatusCode)}, nil
+	case "Cookie":
+		cookies := r.Cookies()
+
+		pairs := make(map[string]Value)
+		order := make([]string, 0, len(cookies))
+
+		for _, ck := range cookies {
+			order = append(order, ck.Name)
+			pairs[ck.Name] = Cookie{
+				Cookie: ck,
+			}
+		}
+
+		return &Object{
+			Order: order,
+			Pairs: pairs,
+		}, nil
 	case "Header":
 		pairs := make(map[string]Value)
 		order := make([]string, 0, len(r.Header))
 
 		for k, v := range r.Header {
 			order = append(order, k)
-			pairs[k] = String{Value: v[0]}
+
+			vals := make([]Value, 0, len(v))
+
+			for _, s := range v {
+				vals = append(vals, String{Value: s})
+			}
+
+			arr, err := NewArray(vals)
+
+			if err != nil {
+				return nil, err
+			}
+			pairs[k] = arr
 		}
 		return &Object{
 			Order: order,

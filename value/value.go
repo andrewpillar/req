@@ -23,6 +23,7 @@ const (
 	formDataType                      // form-data
 	requestType                       // request
 	responseType                      // response
+	cookieType                        // cookie
 	streamType                        // stream
 	nameType                          // name
 	zeroType                          // zero
