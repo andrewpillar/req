@@ -1,0 +1,27 @@
+
+
+Simple = cookie (Name: "simple", Value: "simple");
+Path = cookie (Name: "path", Value: "path", Path: "/");
+Domain = cookie (Name: "domain", Value: "domain", Domain: "example.com");
+#MaxAge = cookie (Name: "maxage", Value: "maxage", MaxAge: 24h);
+Secure = cookie (Name: "secure", Value: "secure", Secure: true);
+HttpOnly = cookie (Name: "httponly", Value: "httponly", HttpOnly: true);
+
+Cookies = [
+	$Simple,
+	$Path,
+	$Domain,
+#	$MaxAge,
+	$Secure,
+	$HttpOnly,
+];
+
+for _, Cookie = range $Cookies {
+	writeln _ $Cookie;
+}
+
+Resp = GET "__endpoint__" (Cookie: $Cookies) -> send;
+
+for _, Cookie = range $Resp.Cookie {
+	writeln _ $Cookie;
+}

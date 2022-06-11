@@ -1,0 +1,10 @@
+simple=simple
+path=path; Path=/
+domain=domain; Domain=example.com
+secure=secure; Secure
+httponly=httponly; HttpOnly
+simple=simple
+path=path
+domain=domain
+secure=secure
+httponly=httponly

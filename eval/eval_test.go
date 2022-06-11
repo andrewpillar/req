@@ -38,6 +38,10 @@ func Test_Eval(t *testing.T) {
 	}
 
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, ck := range r.Cookies() {
+			println(ck.String())
+			http.SetCookie(w, ck)
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 
