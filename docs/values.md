@@ -10,6 +10,7 @@ or returned as a result of a [command](commands.md).
 * [object](#object)
 * [file](#file)
 * [form-data](#form-data)
+* [cookie](#cookie)
 * [request](#request)
 * [response](#response)
 * [stream](#stream)
@@ -114,6 +115,32 @@ encoded data. This would be set in the header of a request.
 **`Data`** - [stream](#stream) - The raw bytes of encoded data. This would be
 used as the body of the request.
 
+## cookie
+
+Cookie represents an HTTP cookie that can be sent in a request, or is sent in
+an HTTP response. This is created via the [cookie](commands.md#cookie) command,
+and can be retrived from a [response](#response) via the `Cookie` field.
+
+Cookie is an entity with the following properties on it,
+
+**`Name`** - [string](#string) - The name of the cookie.
+
+**`Value`** - [string](#string) - The value of the cookie.
+
+**`Path`** - [string](#string) - The path of the cookie.
+
+**`Domain`** - [string](#string) - The domain of the cookie.
+
+**`Expires`** - time - When the cookie expires.
+
+**`MaxAge`** - duration - The max age of the cookie.
+
+**`Secure`** - [bool](#bool) - Whether or not the cookie is secure.
+
+**`HttpOnly`** - [bool](#bool) - Whether or not the cookie is HTTP only.
+
+**`SameSite`** - [string](#string) - How the cookie should be restricted.
+
 ## request
 
 Request represents an HTTP request. This is created via one of the
@@ -141,6 +168,8 @@ Response is an entity with the following properties on it,
 `200 OK`.
 
 **`StatusCode`** - [int](#number) - The status code of the response.
+
+**`Cookie`** - [object](#object) - The [cookies](#cookie) sent in the response.
 
 **`Header`** - [object](#object) - The headers set on the response.
 

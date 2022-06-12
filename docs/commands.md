@@ -22,6 +22,7 @@
   * [json](#json-1)
   * [url](#url-1)
 * [Requests](#requests)
+  * [cookie](#cookie)
   * [send](#send)
   * [tls](#tls)
 
@@ -293,6 +294,38 @@ is the request body. The final two arguments are optional. The methods, `HEAD`,
 
     Payload = open "payload.json";
     POST "https://example.com" (Content-Type: "application/json") $Payload;
+
+### cookie
+
+    cookie <object>
+
+The `cookie` command creates a cookie that can be given to a request in the
+`Cookie` header field. This takes an object that expects the following fields,
+
+    Name
+    Value
+    Path
+    Domain
+    MaxAge
+    Secure
+    HttpOnly
+
+this is then given to the `Cookie` field in the request header, for example,
+
+    Cookie = cookie (Name: "session", Value: encode base64 "session_token");
+    Req = GET "https://example.com" (Cookie: $Cookie);
+
+this can also be given an array of cookies too,
+
+    SessionCookie = cookie (Name: "session", Value: encode base64 "session_token");
+    LoginCookie = cookie (Name: "login", Value: "logged_in");
+
+    Cookies = [
+        $SessionCookie,
+        $LoginCookie,
+    ];
+
+    Req = GET "https://example.com" (Cookie: $Cookies);
 
 ### send
 
