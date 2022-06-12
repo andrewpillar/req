@@ -2,8 +2,8 @@ package eval
 
 import (
 	"bytes"
-	"crypto/x509"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"

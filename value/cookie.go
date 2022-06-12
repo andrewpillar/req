@@ -46,7 +46,7 @@ func (c Cookie) Set(name string, val Value) error {
 		}
 	}
 
-	fieldtab := map[string]func(v Value) error {
+	fieldtab := map[string]func(v Value) error{
 		"Name":   setstring(&c.Cookie.Name),
 		"Value":  setstring(&c.Cookie.Value),
 		"Path":   setstring(&c.Cookie.Path),
