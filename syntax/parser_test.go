@@ -928,6 +928,24 @@ func Test_ParseAssign(t *testing.T) {
 				},
 			},
 		},
+		&AssignStmt{
+			Left: &ExprList{
+				Nodes: []Node{
+					&Name{Value: "Durations"},
+				},
+			},
+			Right: &ExprList{
+				Nodes: []Node{
+					&Array{
+						Items: []Node{
+							&Lit{Type: DurationLit, Value: "10s"},
+							&Lit{Type: DurationLit, Value: "10m"},
+							&Lit{Type: DurationLit, Value: "10h"},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	if len(nn) != len(expected) {

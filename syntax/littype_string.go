@@ -11,12 +11,13 @@ func _() {
 	_ = x[StringLit-1]
 	_ = x[IntLit-2]
 	_ = x[FloatLit-3]
-	_ = x[BoolLit-4]
+	_ = x[DurationLit-4]
+	_ = x[BoolLit-5]
 }
 
-const _LitType_name = "stringintfloatbool"
+const _LitType_name = "stringintfloatdurationbool"
 
-var _LitType_index = [...]uint8{0, 6, 9, 14, 18}
+var _LitType_index = [...]uint8{0, 6, 9, 14, 22, 26}
 
 func (i LitType) String() string {
 	i -= 1

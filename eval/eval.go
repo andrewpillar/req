@@ -8,7 +8,9 @@ import (
 	"hash/fnv"
 	"io"
 	"strconv"
+	"time"
 	"unicode/utf8"
+
 	"github.com/andrewpillar/req/syntax"
 	"github.com/andrewpillar/req/value"
 )
@@ -535,6 +537,9 @@ func (e *Evaluator) Eval(c *Context, n syntax.Node) (value.Value, error) {
 		case syntax.FloatLit:
 			f, _ := strconv.ParseFloat(v.Value, 64)
 			return value.Float{Value: f}, nil
+		case syntax.DurationLit:
+			d, _ := time.ParseDuration(v.Value)
+			return value.Duration{Value: d}, nil
 		case syntax.BoolLit:
 			b := true
 

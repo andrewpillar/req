@@ -1,10 +1,12 @@
 simple=simple
 path=path; Path=/
 domain=domain; Domain=example.com
+maxage=maxage; Max-Age=86400
 secure=secure; Secure
 httponly=httponly; HttpOnly
 simple=simple
 path=path
 domain=domain
+maxage=maxage
 secure=secure
 httponly=httponly

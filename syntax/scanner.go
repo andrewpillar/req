@@ -48,6 +48,26 @@ func (sc *scanner) ident() {
 	sc.lit = lit
 }
 
+func (sc *scanner) duration(r rune) {
+	lit := []rune(sc.lit)
+
+	for r == 's' || r == 'm' || r == 'h' {
+		lit = append(lit, r)
+
+		r = sc.get()
+
+		if isDigit(r) {
+			sc.number()
+			lit = append(lit, []rune(sc.lit)...)
+			r = sc.get()
+		}
+	}
+	sc.unget()
+
+	sc.typ = DurationLit
+	sc.lit = string(lit)
+}
+
 func (sc *scanner) number() {
 	sc.startLit()
 
@@ -172,6 +192,15 @@ redo:
 
 	if isDigit(r) {
 		sc.number()
+
+		r = sc.get()
+
+		if r == 's' || r == 'm' || r == 'h' {
+			sc.duration(r)
+			return
+		}
+
+		sc.unget()
 		return
 	}
 

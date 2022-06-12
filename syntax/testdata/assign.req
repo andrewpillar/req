@@ -12,3 +12,5 @@ Obj = (
 
 Obj["Arr"][] = 1;
 Obj["Arr"][0] = 2;
+
+Durations = [10s, 10m, 10h];

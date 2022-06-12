@@ -105,6 +105,7 @@ const (
 	StringLit LitType = iota + 1 // string
 	IntLit                       // int
 	FloatLit                     // float
+	DurationLit                  // duration
 	BoolLit                      // bool
 )
 
