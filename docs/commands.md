@@ -302,13 +302,13 @@ is the request body. The final two arguments are optional. The methods, `HEAD`,
 The `cookie` command creates a cookie that can be given to a request in the
 `Cookie` header field. This takes an object that expects the following fields,
 
-    Name
-    Value
-    Path
-    Domain
-    MaxAge
-    Secure
-    HttpOnly
+    Name     string
+    Value    string
+    Path     string
+    Domain   string
+    MaxAge   duration
+    Secure   bool
+    HttpOnly bool
 
 this is then given to the `Cookie` field in the request header, for example,
 
