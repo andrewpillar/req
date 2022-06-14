@@ -1,13 +1,17 @@
 package value
 
-import "github.com/andrewpillar/req/syntax"
+import (
+	"fmt"
+
+	"github.com/andrewpillar/req/syntax"
+)
 
 type Tuple struct {
 	T1, T2 Value
 }
 
 func (t *Tuple) String() string {
-	return t.T1.String()
+	return fmt.Sprintf("Tuple<%s, %s>", t.T1.valueType(), t.T2.valueType())
 }
 
 func (t *Tuple) Sprint() string {
