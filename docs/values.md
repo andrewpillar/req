@@ -14,6 +14,7 @@ or returned as a result of a [command](commands.md).
 * [request](#request)
 * [response](#response)
 * [stream](#stream)
+* [tuple](#tuple)
 * [zero](#zero)
 
 ## bool
@@ -171,7 +172,8 @@ Response is an entity with the following properties on it,
 
 **`Cookie`** - [object](#object) - The [cookies](#cookie) sent in the response.
 
-**`Header`** - [object](#object) - The headers set on the response.
+**`Header`** - [object](#object) - The headers set on the response. The values
+in the header will be a [string](#string)-[array](#array) [tuple](#tuple).
 
 **`Body`** - [stream](#stream) - The raw bytes of the response body.
 
@@ -179,6 +181,24 @@ Response is an entity with the following properties on it,
 
 Stream represents a stream of read-only data. This will either be a buffer of
 data that exits in memory, or from another source such as an opened file.
+
+## tuple
+
+A tuple is a value that contains two different values and can be used as either
+value. Tuples are used for [response](#response) header values, which can be
+used either as a [string](#string) or an [array](#array), for example,
+
+    Resp = GET "https://httpbin.org/json" -> send;
+
+    # Can be used as a string, this will contain the first value in the header.
+    if $Resp.Header["Content-Type"] == "application/json" {
+        writeln _ "Content-Type is JSON";
+    }
+
+    # Can also be used as an array to be iterated over.
+    for _, V = range $Resp.Header["Content-Type"] {
+        writeln _ "Content-Type = $(Resp.Header["Content-Type"])";
+    }
 
 ## zero
 
