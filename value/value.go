@@ -55,7 +55,7 @@ func ToStream(v Value) (Stream, error) {
 	typ := v.valueType()
 
 	if t, ok := v.(*Tuple); ok {
-		for _, v := range []Value{t.T1, t.T2} {
+		for _, v := range []Value{t.t1, t.t2} {
 			if s, ok := v.(Stream); ok {
 				return s, nil
 			}
@@ -98,7 +98,7 @@ func ToIterable(v Value) (Iterable, error) {
 	typ := v.valueType()
 
 	if t, ok := v.(*Tuple); ok {
-		for _, v := range []Value{t.T1, t.T2} {
+		for _, v := range []Value{t.t1, t.t2} {
 			if i, ok := v.(Iterable); ok {
 				return i, nil
 			}
@@ -128,7 +128,7 @@ func ToIndex(v Value) (Index, error) {
 	typ := v.valueType()
 
 	if t, ok := v.(*Tuple); ok {
-		for _, v := range []Value{t.T1, t.T2} {
+		for _, v := range []Value{t.t1, t.t2} {
 			if i, ok := v.(Index); ok {
 				return i, nil
 			}
@@ -153,7 +153,7 @@ func ToSelector(v Value) (Selector, error) {
 	typ := v.valueType()
 
 	if t, ok := v.(*Tuple); ok {
-		for _, v := range []Value{t.T1, t.T2} {
+		for _, v := range []Value{t.t1, t.t2} {
 			if s, ok := v.(Selector); ok {
 				return s, nil
 			}

@@ -66,8 +66,8 @@ func (r Response) Select(val Value) (Value, error) {
 			}
 
 			pairs[k] = &Tuple{
-				T1: vals[0],
-				T2: arr,
+				t1: vals[0],
+				t2: arr,
 			}
 		}
 		return &Object{
