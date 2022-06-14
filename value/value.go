@@ -28,6 +28,7 @@ const (
 	cookieType                        // cookie
 	streamType                        // stream
 	nameType                          // name
+	tupleType                         // tuple
 	zeroType                          // zero
 )
 
@@ -51,10 +52,20 @@ type Stream interface {
 
 // ToStream attempts to assert the given Value to a Stream.
 func ToStream(v Value) (Stream, error) {
+	typ := v.valueType()
+
+	if t, ok := v.(*Tuple); ok {
+		for _, v := range []Value{t.T1, t.T2} {
+			if s, ok := v.(Stream); ok {
+				return s, nil
+			}
+		}
+	}
+
 	s, ok := v.(Stream)
 
 	if !ok {
-		return nil, typeError(v.valueType(), streamType)
+		return nil, typeError(typ, streamType)
 	}
 	return s, nil
 }
@@ -84,10 +95,20 @@ type Iterable interface {
 
 // ToIterable attempts to asset the given Value to an Iterable.
 func ToIterable(v Value) (Iterable, error) {
+	typ := v.valueType()
+
+	if t, ok := v.(*Tuple); ok {
+		for _, v := range []Value{t.T1, t.T2} {
+			if i, ok := v.(Iterable); ok {
+				return i, nil
+			}
+		}
+	}
+
 	i, ok := v.(Iterable)
 
 	if !ok {
-		return nil, errors.New("type " + v.valueType().String() + " is not an iterable")
+		return nil, errors.New("type " + typ.String() + " is not an iterable")
 	}
 	return i, nil
 }
@@ -104,10 +125,20 @@ type Index interface {
 
 // ToIndex attempts to assert the given Value to an Index.
 func ToIndex(v Value) (Index, error) {
+	typ := v.valueType()
+
+	if t, ok := v.(*Tuple); ok {
+		for _, v := range []Value{t.T1, t.T2} {
+			if i, ok := v.(Index); ok {
+				return i, nil
+			}
+		}
+	}
+
 	i, ok := v.(Index)
 
 	if !ok {
-		return nil, errors.New("type " + v.valueType().String() + " does not support indexing")
+		return nil, errors.New("type " + typ.String() + " does not support indexing")
 	}
 	return i, nil
 }
@@ -119,10 +150,20 @@ type Selector interface {
 
 // ToSelector attempts to assert the given Value to a Selector.
 func ToSelector(v Value) (Selector, error) {
+	typ := v.valueType()
+
+	if t, ok := v.(*Tuple); ok {
+		for _, v := range []Value{t.T1, t.T2} {
+			if s, ok := v.(Selector); ok {
+				return s, nil
+			}
+		}
+	}
+
 	s, ok := v.(Selector)
 
 	if !ok {
-		return nil, errors.New("type " + v.valueType().String() + " has no fields")
+		return nil, errors.New("type " + typ.String() + " has no fields")
 	}
 	return s, nil
 }

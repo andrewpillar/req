@@ -23,12 +23,13 @@ func _() {
 	_ = x[cookieType-13]
 	_ = x[streamType-14]
 	_ = x[nameType-15]
-	_ = x[zeroType-16]
+	_ = x[tupleType-16]
+	_ = x[zeroType-17]
 }
 
-const _valueType_name = "stringintfloatbooltimedurationarrayobjectfileform-datarequestresponsecookiestreamnamezero"
+const _valueType_name = "stringintfloatbooltimedurationarrayobjectfileform-datarequestresponsecookiestreamnametuplezero"
 
-var _valueType_index = [...]uint8{0, 6, 9, 14, 18, 22, 30, 35, 41, 45, 54, 61, 69, 75, 81, 85, 89}
+var _valueType_index = [...]uint8{0, 6, 9, 14, 18, 22, 30, 35, 41, 45, 54, 61, 69, 75, 81, 85, 90, 94}
 
 func (i valueType) String() string {
 	i -= 1

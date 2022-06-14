@@ -64,7 +64,11 @@ func (r Response) Select(val Value) (Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			pairs[k] = arr
+
+			pairs[k] = &Tuple{
+				T1: vals[0],
+				T2: arr,
+			}
 		}
 		return &Object{
 			Order: order,
