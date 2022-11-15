@@ -99,6 +99,7 @@ var builtinCmds = []*Command{
 	TlsCmd,
 	SendCmd,
 	SniffCmd,
+	UuidCmd,
 }
 
 // New returns a new evaluator for evaluating req scripts. The given writer is

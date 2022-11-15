@@ -21,6 +21,7 @@ import (
 
 	"github.com/andrewpillar/req/value"
 	"github.com/andrewpillar/req/version"
+	"github.com/google/uuid"
 )
 
 // CommandFunc is the function for handling the invocation of a command. This
@@ -131,6 +132,19 @@ func env(cmd string, args []value.Value) (value.Value, error) {
 
 	return value.String{
 		Value: os.Getenv(str.Value),
+	}, nil
+}
+
+// UuidCmd implements the uuid command for generating UUIDs.
+var UuidCmd = &Command{
+	Name: "uuid",
+	Argc: -1,
+	Func: uuidFn,
+}
+
+func uuidFn(cmd string, args []value.Value) (value.Value, error) {
+	return value.String{
+		Value: uuid.New().String(),
 	}, nil
 }
 
