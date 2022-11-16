@@ -107,10 +107,10 @@ func Test_Uuid(t *testing.T) {
 	uuidV4Format := `^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$`
 	matched, err := regexp.MatchString(uuidV4Format, buf.String())
 	if err != nil {
-		t.Fatalf("could not parse regex %s\n", uuidV4Format)
+		t.Fatalf("could not parse regex %q\n", uuidV4Format)
 	}
 	if !matched {
-		t.Fatalf("expected %s to match %s\n", buf.String(), uuidV4Format)
+		t.Fatalf("expected %q to match %q\n", buf.String(), uuidV4Format)
 	}
 }
 

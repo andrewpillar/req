@@ -138,14 +138,12 @@ func env(cmd string, args []value.Value) (value.Value, error) {
 // UuidCmd implements the uuid command for generating UUIDs.
 var UuidCmd = &Command{
 	Name: "uuid",
-	Argc: -1,
-	Func: uuidFn,
-}
-
-func uuidFn(cmd string, args []value.Value) (value.Value, error) {
-	return value.String{
-		Value: uuid.New().String(),
-	}, nil
+	Argc: 0,
+	Func: func(cmd string, args []value.Value) (value.Value, error) {
+		return value.String{
+			Value: uuid.New().String(),
+		}, nil
+	},
 }
 
 // ExitCmd implements the exit command that will cause the current script to
