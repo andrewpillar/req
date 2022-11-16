@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -83,6 +84,33 @@ func Test_Eval(t *testing.T) {
 			t.Fatalf("unexpected output for script %q\n\n\texpected %q\n\n\t     got %q", fname, string(b), buf.String())
 		}
 		buf.Reset()
+	}
+}
+
+func Test_Uuid(t *testing.T) {
+	expr := `Uuid = uuid; write _ $Uuid;`
+	nn, err := syntax.Parse("-", strings.NewReader(expr), errh(t))
+
+	if err != nil {
+		t.Fatalf("%s\n", err)
+	}
+
+	buf := &bytes.Buffer{}
+	e := New(buf)
+
+	err = e.Run(nn)
+
+	if err != nil {
+		t.Fatalf("expected evaluation of %q to be successful\n", expr)
+	}
+
+	uuidV4Format := `^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$`
+	matched, err := regexp.MatchString(uuidV4Format, buf.String())
+	if err != nil {
+		t.Fatalf("could not parse regex %q\n", uuidV4Format)
+	}
+	if !matched {
+		t.Fatalf("expected %q to match %q\n", buf.String(), uuidV4Format)
 	}
 }
 

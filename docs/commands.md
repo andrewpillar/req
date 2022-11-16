@@ -10,6 +10,7 @@
   * [writeln](#writeln)
 * [General](#general)
   * [env](#env)
+  * [uuid](#uuid)
   * [exit](#exit)
 * [Encoding](#encoding)
   * [base64](#base64)
@@ -148,6 +149,14 @@ environment variable is set, then an empty [string](values.md#string) is
 returned,
 
     Token = env "GH_TOKEN";
+
+### uuid
+
+    uuid
+
+The uuid command returns a new UUIDv4,
+
+    Uuid = uuid;
 
 ### exit
 
