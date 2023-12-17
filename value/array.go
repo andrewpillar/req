@@ -13,8 +13,7 @@ import (
 // Array holds a list of values, and an underlying hash of each of the items
 // in the array. This hash is used to perform in operations on the array.
 type Array struct {
-	curr  int
-	atEOF bool
+	curr int
 
 	set   map[uint32]struct{}
 	Items []Value

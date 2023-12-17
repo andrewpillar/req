@@ -58,7 +58,11 @@ func (r *Request) Select(val Value) (Value, error) {
 			return &stream{}, nil
 		}
 
-		rc, rc2 := copyrc(r.Body)
+		rc, rc2, err := copyrc(r.Body)
+
+		if err != nil {
+			return nil, err
+		}
 		r.Body = rc
 
 		b, _ := io.ReadAll(rc2)
@@ -75,11 +79,13 @@ func (r *Request) String() string {
 	return fmt.Sprintf("Request<addr=%p>", r.Request)
 }
 
-func copyrc(rc io.ReadCloser) (io.ReadCloser, io.ReadCloser) {
+func copyrc(rc io.ReadCloser) (io.ReadCloser, io.ReadCloser, error) {
 	var buf bytes.Buffer
-	buf.ReadFrom(rc)
+	if _, err := buf.ReadFrom(rc); err != nil {
+		return nil, nil, err
+	}
 
-	return io.NopCloser(&buf), io.NopCloser(bytes.NewBuffer(buf.Bytes()))
+	return io.NopCloser(&buf), io.NopCloser(bytes.NewBuffer(buf.Bytes())), nil
 }
 
 // Sprint formats the request into a string. This makes a copy of the request
@@ -91,15 +97,22 @@ func (r *Request) Sprint() string {
 
 	buf := bytes.NewBufferString(r.Method + " " + r.Proto + "\n")
 
-	r.Header.Write(buf)
+	if err := r.Header.Write(buf); err != nil {
+		panic(err)
+	}
 
 	if r.Body != nil {
 		buf.WriteString("\n")
 
-		rc, rc2 := copyrc(r.Body)
+		rc, rc2, err := copyrc(r.Body)
+		if err == nil {
+			panic(err)
+		}
 
 		r.Body = rc
-		io.Copy(buf, rc2)
+		if _, err := io.Copy(buf, rc2); err != nil {
+			panic(err)
+		}
 	}
 	return buf.String()
 }

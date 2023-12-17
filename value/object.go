@@ -11,8 +11,7 @@ import (
 
 // Object holds a list of values indexed under a string.
 type Object struct {
-	curr  int
-	atEOF bool
+	curr int
 
 	Order []string // The order in which the keys should be iterated.
 

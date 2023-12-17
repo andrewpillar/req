@@ -188,7 +188,7 @@ func open(cmd string, args []value.Value) (value.Value, error) {
 		}
 	}
 
-	f, err := os.OpenFile(str.Value, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0644))
+	f, err := os.OpenFile(str.Value, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.FileMode(0o644))
 
 	if err != nil {
 		return nil, &CommandError{
@@ -303,9 +303,7 @@ func readln(cmd string, args []value.Value) (value.Value, error) {
 
 	line := string(buf[:pos])
 
-	off, err = rs.Seek(int64(pos)+off, io.SeekStart)
-
-	if err != nil {
+	if _, err = rs.Seek(int64(pos)+off, io.SeekStart); err != nil {
 		return nil, &CommandError{
 			Cmd: cmd,
 			Err: err,
@@ -944,7 +942,12 @@ func encodeFormData(boundary string) CommandFunc {
 		w := multipart.NewWriter(&buf)
 
 		if boundary != "" {
-			w.SetBoundary(boundary)
+			if err := w.SetBoundary(boundary); err != nil {
+				return nil, &CommandError{
+					Cmd: cmd,
+					Err: err,
+				}
+			}
 		}
 
 		for _, k := range obj.Order {
@@ -952,7 +955,12 @@ func encodeFormData(boundary string) CommandFunc {
 
 			switch v2 := v.(type) {
 			case value.String, value.Int, value.Bool:
-				w.WriteField(k, v.Sprint())
+				if err := w.WriteField(k, v.Sprint()); err != nil {
+					return nil, &CommandError{
+						Cmd: cmd,
+						Err: err,
+					}
+				}
 			case value.File:
 				sw, err := w.CreateFormFile(k, v2.Name())
 

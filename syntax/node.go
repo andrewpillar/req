@@ -147,11 +147,12 @@ type CaseStmt struct {
 
 // MatchStmt for checking the condition against different literals. The default
 // condition for a match statement is defined with the name _.
-// match Cond {
-//     Cases[0];
-//     Cases[1];
-//     Default;
-// }
+//
+//	match Cond {
+//	    Cases[0];
+//	    Cases[1];
+//	    Default;
+//	}
 type MatchStmt struct {
 	node
 

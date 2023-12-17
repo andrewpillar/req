@@ -59,7 +59,9 @@ func (f File) String() string {
 // Sprint returns the entire contents of the underlying file as a string. Once
 // read, the file cursor is returned to the beginning of the file.
 func (f File) Sprint() string {
-	f.Seek(0, io.SeekStart)
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return ""
+	}
 
 	b, err := io.ReadAll(f.File)
 
@@ -67,7 +69,10 @@ func (f File) Sprint() string {
 		return ""
 	}
 
-	f.Seek(0, io.SeekStart)
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return ""
+	}
+
 	return string(b)
 }
 

@@ -682,14 +682,15 @@ func Test_ParseFor(t *testing.T) {
 					},
 				},
 				Right: &ExprList{
-					Nodes: []Node{&CommandStmt{
-						Name: &Name{Value: "read"},
-						Args: []Node{
-							&Ref{
-								Left: &Name{Value: "F"},
+					Nodes: []Node{
+						&CommandStmt{
+							Name: &Name{Value: "read"},
+							Args: []Node{
+								&Ref{
+									Left: &Name{Value: "F"},
+								},
 							},
 						},
-					},
 					},
 				},
 			},
@@ -709,14 +710,15 @@ func Test_ParseFor(t *testing.T) {
 					},
 				},
 				Right: &ExprList{
-					Nodes: []Node{&CommandStmt{
-						Name: &Name{Value: "read"},
-						Args: []Node{
-							&Ref{
-								Left: &Name{Value: "F"},
+					Nodes: []Node{
+						&CommandStmt{
+							Name: &Name{Value: "read"},
+							Args: []Node{
+								&Ref{
+									Left: &Name{Value: "F"},
+								},
 							},
 						},
-					},
 					},
 				},
 			},
