@@ -79,11 +79,7 @@ func (r Response) Select(val Value) (Value, error) {
 			return &stream{}, nil
 		}
 
-		rc, rc2, err := copyrc(r.Body)
-
-		if err != nil {
-			return nil, err
-		}
+		rc, rc2 := copyrc(r.Body)
 		r.Body = rc
 
 		b, _ := io.ReadAll(rc2)
@@ -109,23 +105,15 @@ func (r Response) Sprint() string {
 
 	buf := bytes.NewBufferString(r.Proto + " " + r.Status + "\n")
 
-	if err := r.Header.Write(buf); err != nil {
-		panic(err)
-	}
+	_ = r.Header.Write(buf)
 
 	if r.Body != nil {
 		buf.WriteString("\n")
 
-		rc, rc2, err := copyrc(r.Body)
-
-		if err != nil {
-			panic(err)
-		}
+		rc, rc2 := copyrc(r.Body)
 
 		r.Body = rc
-		if _, err := io.Copy(buf, rc2); err != nil {
-			panic(err)
-		}
+		_, _ = io.Copy(buf, rc2)
 	}
 	return buf.String()
 }

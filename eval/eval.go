@@ -785,9 +785,7 @@ func (e *Evaluator) Run(nn []syntax.Node) error {
 	}
 
 	for _, fn := range e.finalizers {
-		if err := fn(); err != nil {
-			return err
-		}
+		_ = fn()
 	}
 	return nil
 }

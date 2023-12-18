@@ -25,18 +25,15 @@ func (s stream) String() string {
 }
 
 func (s stream) Sprint() string {
-	if _, err := s.Seek(0, io.SeekStart); err != nil {
-		return ""
-	}
+	_, _ = s.Seek(0, io.SeekStart)
 
 	b, err := io.ReadAll(s)
+
 	if err != nil {
 		return ""
 	}
 
-	if _, err := s.Seek(0, io.SeekStart); err != nil {
-		return ""
-	}
+	_, _ = s.Seek(0, io.SeekStart)
 	return string(b)
 }
 

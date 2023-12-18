@@ -45,9 +45,7 @@ func (f *FormData) Sprint() string {
 		return ""
 	}
 
-	if _, err := f.Data.Seek(0, io.SeekStart); err != nil {
-		return ""
-	}
+	_, _ = f.Data.Seek(0, io.SeekStart)
 
 	return string(b)
 }

@@ -71,10 +71,7 @@ func main() {
 
 	fs := flag.NewFlagSet(argv0, flag.ExitOnError)
 	fs.BoolVar(&showVersion, "version", false, "show version and exit")
-	if err := fs.Parse(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)
-		os.Exit(1)
-	}
+	_ = fs.Parse(os.Args[1:])
 
 	if showVersion {
 		fmt.Println(version.Build)
@@ -96,10 +93,7 @@ func main() {
 		t := term.NewTerminal(os.Stdout, "> ")
 
 		repl(t)
-		if err := term.Restore(fd, state); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", argv0, err)
-			os.Exit(1)
-		}
+		_ = term.Restore(fd, state)
 		fmt.Println()
 		return
 	}

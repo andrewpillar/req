@@ -942,12 +942,7 @@ func encodeFormData(boundary string) CommandFunc {
 		w := multipart.NewWriter(&buf)
 
 		if boundary != "" {
-			if err := w.SetBoundary(boundary); err != nil {
-				return nil, &CommandError{
-					Cmd: cmd,
-					Err: err,
-				}
-			}
+			_ = w.SetBoundary(boundary)
 		}
 
 		for _, k := range obj.Order {
@@ -955,12 +950,7 @@ func encodeFormData(boundary string) CommandFunc {
 
 			switch v2 := v.(type) {
 			case value.String, value.Int, value.Bool:
-				if err := w.WriteField(k, v.Sprint()); err != nil {
-					return nil, &CommandError{
-						Cmd: cmd,
-						Err: err,
-					}
-				}
+				_ = w.WriteField(k, v.Sprint())
 			case value.File:
 				sw, err := w.CreateFormFile(k, v2.Name())
 
